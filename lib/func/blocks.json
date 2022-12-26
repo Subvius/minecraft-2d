@@ -1,0 +1,193 @@
+{
+  "1": {
+    "item_id": "grass_block",
+    "image_root": "grass.png",
+    "numerical_id": "1",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 0.6,
+    "diggable": 1
+  },
+  "2": {
+    "item_id": "dirt",
+    "image_root": "dirt.png",
+    "numerical_id": "2",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 0.5,
+    "diggable": 1
+  },
+  "3": {
+    "item_id": "stone",
+    "image_root": "stone.png",
+    "numerical_id": "3",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 1.5,
+    "diggable": 1
+  },
+  "56": {
+    "item_id": "diamond_ore",
+    "image_root": "diamond_ore.jpeg",
+    "numerical_id": "56",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 3.0,
+    "diggable": 1
+  },
+  "14": {
+    "item_id": "gold_ore",
+    "image_root": "gold_ore.jpeg",
+    "numerical_id": "14",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 3.0,
+    "diggable": 1
+  },
+  "15": {
+    "item_id": "iron_ore",
+    "image_root": "iron_ore.jpeg",
+    "numerical_id": "15",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 3.0,
+    "diggable": 1
+  },
+  "16": {
+    "item_id": "coal_ore",
+    "image_root": "coal_ore.jpeg",
+    "numerical_id": "16",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 3.0,
+    "diggable": 1
+  },
+  "21": {
+    "item_id": "lapis_lazuli_ore",
+    "image_root": "lapis_lazuli_ore.jpeg",
+    "numerical_id": "21",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 3.0,
+    "diggable": 1
+  },
+  "73": {
+    "item_id": "redstone_ore",
+    "image_root": "redstone_ore.jpeg",
+    "numerical_id": "73",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 3.0,
+    "diggable": 1
+  },
+  "129": {
+    "item_id": "emerald_ore",
+    "image_root": "emerald_ore.jpeg",
+    "numerical_id": "129",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 3.0,
+    "diggable": 1
+  },
+  "17": {
+    "item_id": "oak_log",
+    "image_root": "oak_log.jpeg",
+    "numerical_id": "17",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 2.0,
+    "diggable": 1
+  },
+  "18": {
+    "item_id": "oak_leaves",
+    "image_root": "oak_leaves.png",
+    "numerical_id": "18",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 0.2,
+    "diggable": 1
+  },
+  "5": {
+    "item_id": "oak_planks",
+    "image_root": "oak_planks.jpeg",
+    "numerical_id": "5",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 2.0,
+    "diggable": 1
+  },
+  "49": {
+    "item_id": "obsidian",
+    "image_root": "obsidian.png",
+    "numerical_id": "49",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 50.0,
+    "diggable": 1
+  },
+  "90": {
+    "item_id": "nether_portal",
+    "image_root": "nether_portal_frame.webp",
+    "numerical_id": "90",
+    "stackable": 0,
+    "max_stack_size": 0,
+    "hardness": -1.0,
+    "diggable": 0
+  },
+  "87": {
+    "item_id": "netherrack",
+    "image_root": "netherrack.png",
+    "numerical_id": "87",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 0.4,
+    "diggable": 1
+  },
+  "153": {
+    "item_id": "quartz",
+    "image_root": "quartz.png",
+    "numerical_id": "153",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 3.0,
+    "diggable": 1
+  },
+
+  "324": {
+    "item_id": "oak_door",
+    "image_root": "oak_door.jpeg",
+    "numerical_id": "324",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 3.0,
+    "diggable": 1
+  },
+  "306": {
+    "item_id": "iron_helmet",
+    "image_root": "armor/iron_helmet.png",
+    "numerical_id": "306",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
+  "307": {
+    "item_id": "iron_chestplate",
+    "image_root": "armor/iron_chestplate.png",
+    "numerical_id": "307",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
+  "308": {
+    "item_id": "iron_leggins",
+    "image_root": "armor/iron_leggins.png",
+    "numerical_id": "308",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
+  "309": {
+    "item_id": "iron_boots",
+    "image_root": "armor/iron_boots.png",
+    "numerical_id": "309",
+    "stackable": 0,
+    "max_stack_size": 1
+  }
+}
