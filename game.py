@@ -13,7 +13,7 @@ from lib.func.map import *
 from lib.models.player import *
 from lib.models.screen import *
 from lib.models.buttons import *
-from lib.models.entity import *
+from lib.models.cave_monster import *
 
 clock = pygame.time.Clock()
 
@@ -138,9 +138,6 @@ create_world_buttons = [
 
 ]
 
-
-
-
 animation_duration = 200
 last_update = pygame.time.get_ticks()
 levitating_blocks_animation = 8
@@ -149,6 +146,18 @@ last_heal = pygame.time.get_ticks()
 HEAL_DELAY = 1500
 
 mobs = list()
+mob_images = dict()
+
+for folder in os.listdir("lib/assets/animations/mobs/"):
+    mob_images.update({folder: {}})
+    for file in os.listdir(f"lib/assets/animations/mobs/{folder}"):
+        mob_images[folder][file.split(".")[0]] = pygame.image.load(f"lib/assets/animations/mobs/{folder}/{file}")
+
+mob = CaveMonster(20, 20, 1, 2, 1, True, False, (0, 0), 32, 64, 8)
+mob.cut_sheet(mob_images["cave_monster"]["idle"], 4, 1, "idle", 120, 50)
+mob_images['cave_monster']['idle'] = mob.images
+mob.cut_sheet(mob_images["cave_monster"]["walk"], 6, 1, "walk", 120, 45)
+mob_images['cave_monster']['walk'] = mob.images
 
 while True:
     if screen_status.screen == 'game':
@@ -241,11 +250,11 @@ while True:
             y += 1
 
         if random.randint(0, 1000) == 5:
-            print('mobb')
             position = [random.choice(possible_x) * 32, random.choice(possible_y) * 32]
             # position = [player.rect.x, player.rect.y]
 
-            mob = Entity(20, 20, 1, 2, 1, True, False, position, 32, 64, 8)
+            mob = CaveMonster(20, 20, 1, 2, 1, True, False, position, 32, 64, 8)
+
             mobs.append(mob)
 
         for item in falling_items:
@@ -457,7 +466,7 @@ while True:
                        blocks_data)
         draw_health_bar(screen, player, width, height, icons)
 
-        draw_mobs(screen, player, mobs, possible_x, possible_y, scroll, map_objects, game_map)
+        mobs = draw_mobs(screen, player, mobs, possible_x, possible_y, scroll, map_objects, game_map, mob_images)
 
         if screen_status.show_inventory:
             draw_expanded_inventory(screen, player.inventory, width, height, inventory_font,

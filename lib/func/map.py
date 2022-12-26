@@ -94,7 +94,7 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
                             map_objects.remove(pygame.Rect(value_x * 32, value_y * 32, 32, 32))
                             hold_start = now
 
-                            num_id = player.inventory[0][player.selected_inventory_slot]['numerical_id']
+                            num_id = tile
                             x += scroll[0]
                             y += scroll[1]
                             falling_items.append({
@@ -116,16 +116,22 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
 
 
 def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possible_x: list[int], possible_y: list[int],
-              scroll: list[int], map_objects: list[pygame.Rect], game_map: list):
+              scroll: list[int], map_objects: list[pygame.Rect], game_map: list, images):
     for mob in mobs:
         rect = mob.rect
         if rect.x // 32 in possible_x and rect.y // 32 in possible_y:
-            pygame.draw.rect(screen, "black",
-                             pygame.Rect(rect.x - scroll[0], rect.y - scroll[1], rect.width,
-                                         rect.height))
+            # pygame.draw.rect(screen, "black",
+            #                  pygame.Rect(rect.x - scroll[0], rect.y - scroll[1], rect.width,
+            #                              rect.height))
+            image = images[mob.mob_type][mob.condition][mob.condition][mob.frame]
+            screen.blit(pygame.transform.flip(pygame.transform.scale(image, (mob.width, mob.height)),
+                                              mob.moving_direction == 'left', False),
+                        (rect.x - scroll[0], rect.y - scroll[1]))
+        else:
+            mobs.remove(mob)
         close = is_close(rect.x, rect.y, player.rect.x, player.rect.y, mob.trigger_radius)
         if close:
-            mob.set_destination(player.rect.center)
+            mob.set_destination(player.rect.midtop)
         else:
             mob.set_destination(None)
         destination = mob.destination
@@ -134,12 +140,51 @@ def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possib
         if destination is not None:
             if rect.x < destination[0]:
                 movement[0] += 1 * mob.speed
+                mob.moving_direction = 'left'
             elif rect.x > destination[0]:
                 movement[0] -= 1 * mob.speed
-        if game_map[rect.y // 32 + 1][rect.x // 32] == "0":
-            movement[1] += 1
+                mob.moving_direction = 'right'
+
+        if movement == [0, 0]:
+            if mob.condition != 'idle':
+                mob.change_condition('idle')
+        else:
+            if mob.condition == 'idle':
+                mob.change_condition('walk')
+
+        try:
+            if game_map[rect.y // 32 + 1][rect.x // 32] == "0":
+                movement[1] += 1
+        except IndexError as e:
+            # Escaped from map :(
+            pass
+
+        movement[1] += mob.vertical_momentum
         rect, collisions = move(rect, movement, map_objects)
+        mob.vertical_momentum += 0.5
+        if mob.vertical_momentum > 3:
+            mob.vertical_momentum = 3
+        if collisions['bottom']:
+            mob.vertical_momentum = 0
+
+        if movement[0] > 0 and collisions['bottom'] and collisions['right'] and mob.vertical_momentum == 0:
+            mob.vertical_momentum -= mob.jump_height * 4.5
+
+        elif movement[0] < 0 and collisions['bottom'] and collisions['left'] and mob.vertical_momentum == 0:
+            mob.vertical_momentum -= mob.jump_height * 4.5
+
         mob.rect = rect
+        current_time = pygame.time.get_ticks()
+        if current_time - mob.last_update > mob.animation_duration:
+            mob.update_image(len(images[mob.mob_type][mob.condition][mob.condition]))
+            mob.last_update = current_time
+
+        if mob.rect.topleft == player.rect.midtop:
+            if current_time - mob.last_attack >= mob.attack_delay:
+                player.damage(mob.attack_damage)
+                mob.last_attack = current_time
+
+    return mobs
 
 
 def draw_health_bar(screen, player: Player, width, height, icons):
