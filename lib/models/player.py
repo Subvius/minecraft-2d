@@ -49,6 +49,8 @@ class Player:
 
     def set_selected_slot(self, slot: int):
         self.selected_inventory_slot = slot
+        if not 0 <= self.selected_inventory_slot <= 8:
+            self.selected_inventory_slot = 8 if self.selected_inventory_slot < 0 else 0
 
     def can_pick_up(self, game_map: list):
         block = game_map[self.rect.y // 32 + 1][self.rect.x // 32]

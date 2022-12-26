@@ -251,7 +251,7 @@ while True:
                                      player.rect.y, 4)
 
                     if mrect.colliderect(rect) and close:
-                        pygame.draw.rect(display, (232,115,104), rect, width=2)
+                        pygame.draw.rect(display, (232, 115, 104), rect, width=2)
 
                     if percentage:
                         image = pygame.image.load(
@@ -267,7 +267,7 @@ while True:
 
         for item in falling_items:
             rect = pygame.Rect(item["x"], item["y"], 16, 16)
-            rect = rect.move(-1 if item['direction'] == 'left' else 1, 2)
+            rect = rect.move(-1 if item['direction'] == 'left' else 1 if item['direction'] == 'right' else 0, 2)
 
             collide = False
             for block in map_objects:
@@ -412,10 +412,10 @@ while True:
         # player.draw(display, player_rect.x - scroll[0], player_rect.y - scroll[1])
 
         if holding_left_button:
-            map_objects, game_map, hold_start = on_left_click(hold_pos, player.rect, map_objects, scroll, game_map,
+            map_objects, game_map, hold_start, falling_items = on_left_click(hold_pos, player.rect, map_objects, scroll, game_map,
                                                               player,
                                                               hold_start,
-                                                              blocks_data)
+                                                              blocks_data, falling_items)
 
         screen.blit(pygame.transform.scale(display, WINDOW_SIZE), (0, 0))
 
@@ -762,10 +762,14 @@ while True:
                                                                  quantity=selected_item['quantity'])
                         selected_item = None
 
-        if event.type == pygame.MOUSEMOTION and screen_status.screen == "game" and screen_status.show_inventory and selected_item is not None:
+        if event.type == pygame.MOUSEMOTION and screen_status.screen == "game" and screen_status.show_inventory \
+                and selected_item is not None:
             rel = event.pos
             selected_item["x"] = rel[0]
             selected_item["y"] = rel[1]
+
+        if event.type == pygame.MOUSEWHEEL and screen_status.screen == "game" and not screen_status.show_inventory:
+            player.set_selected_slot(player.selected_inventory_slot - event.y)
 
         if event.type == KEYDOWN and screen_status.screen == 'game':
             if event.key == pygame.K_e:

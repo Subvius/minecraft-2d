@@ -6,7 +6,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 0.6,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "dirt"
   },
   "2": {
     "item_id": "dirt",
@@ -15,7 +16,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 0.5,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "dirt"
   },
   "3": {
     "item_id": "stone",
@@ -24,7 +26,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 1.5,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "rock"
   },
   "56": {
     "item_id": "diamond_ore",
@@ -33,7 +36,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 3.0,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "rock"
   },
   "14": {
     "item_id": "gold_ore",
@@ -42,7 +46,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 3.0,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "rock"
   },
   "15": {
     "item_id": "iron_ore",
@@ -51,7 +56,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 3.0,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "rock"
   },
   "16": {
     "item_id": "coal_ore",
@@ -60,7 +66,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 3.0,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "rock"
   },
   "21": {
     "item_id": "lapis_lazuli_ore",
@@ -69,7 +76,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 3.0,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "rock"
   },
   "73": {
     "item_id": "redstone_ore",
@@ -78,7 +86,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 3.0,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "rock"
   },
   "129": {
     "item_id": "emerald_ore",
@@ -87,7 +96,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 3.0,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "rock"
   },
   "17": {
     "item_id": "oak_log",
@@ -96,7 +106,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 2.0,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "wood"
   },
   "18": {
     "item_id": "oak_leaves",
@@ -105,7 +116,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 0.2,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "plant"
   },
   "5": {
     "item_id": "oak_planks",
@@ -114,7 +126,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 2.0,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "wood"
   },
   "49": {
     "item_id": "obsidian",
@@ -123,7 +136,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 50.0,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "rock"
   },
   "90": {
     "item_id": "nether_portal",
@@ -141,7 +155,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 0.4,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "rock"
   },
   "153": {
     "item_id": "quartz",
@@ -150,7 +165,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 3.0,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "rock"
   },
 
   "324": {
@@ -160,7 +176,8 @@
     "stackable": 1,
     "max_stack_size": 64,
     "hardness": 3.0,
-    "diggable": 1
+    "diggable": 1,
+    "material" : "wood"
   },
   "306": {
     "item_id": "iron_helmet",

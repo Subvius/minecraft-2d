@@ -38,7 +38,8 @@ def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Pl
     return map_objects, game_map
 
 
-def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Player, hold_start, blocks_data):
+def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Player, hold_start, blocks_data,
+                  falling_items):
     x = pos[0]
     y = pos[1]
     # максимальная дистанция 4 блока (сторона 32)
@@ -49,24 +50,37 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
         try:
             data = game_map[value_y][value_x]
             tile = data if not data.count("-") else data.split("-")[0]
-            if tile != "0":
+            if tile != "0" and not tile.count(":"):
 
                 block_data = blocks_data[tile]
-                breaking_time = calculate_breaking_time(block_data['hardness'], 1)
-                now = datetime.datetime.now()
-                if now - hold_start >= datetime.timedelta(seconds=breaking_time):
-                    game_map[value_y][value_x] = '0'
-                    map_objects.remove(pygame.Rect(value_x * 32, value_y * 32, 32, 32))
-                    hold_start = now
-                else:
-                    time_spent = now - hold_start
-                    percentage = (time_spent / datetime.timedelta(
-                        seconds=breaking_time)) * 100
-                    game_map[value_y][value_x] = f"{tile}-{int(percentage)}"
+                if type(block_data) == dict:
+                    if block_data.get('diggable', 0):
+                        breaking_time = calculate_breaking_time(block_data['hardness'], 1)
+                        now = datetime.datetime.now()
+                        if now - hold_start >= datetime.timedelta(seconds=breaking_time):
+                            game_map[value_y][value_x] = '0'
+                            map_objects.remove(pygame.Rect(value_x * 32, value_y * 32, 32, 32))
+                            hold_start = now
+
+                            num_id = player.inventory[0][player.selected_inventory_slot]['numerical_id']
+                            x += scroll[0]
+                            y += scroll[1]
+                            falling_items.append({
+                                "direction": "down",
+                                "x": x,
+                                "y": y,
+                                "numerical_id": num_id
+                            })
+                        else:
+                            time_spent = now - hold_start
+                            percentage = (time_spent / datetime.timedelta(
+                                seconds=breaking_time)) * 100
+                            game_map[value_y][value_x] = f"{tile}-{int(percentage)}"
+
         except IndexError:
             print('доделать!!!!! (lib/models/map.py), line: 26')
 
-    return map_objects, game_map, hold_start
+    return map_objects, game_map, hold_start, falling_items
 
 
 def draw_health_bar(screen, player: Player, width, height, icons):
