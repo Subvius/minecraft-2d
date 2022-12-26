@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import random
 import sqlite3
 
 import sys
@@ -12,6 +13,7 @@ from lib.func.map import *
 from lib.models.player import *
 from lib.models.screen import *
 from lib.models.buttons import *
+from lib.models.entity import *
 
 clock = pygame.time.Clock()
 
@@ -137,35 +139,6 @@ create_world_buttons = [
 ]
 
 
-def collision_test(rect, tiles):
-    hit_list = []
-    for tile_elem in tiles:
-        if rect.colliderect(tile_elem):
-            hit_list.append(tile_elem)
-    return hit_list
-
-
-def move(rect, movement, tiles):
-    collision_types = {'top': False, 'bottom': False, 'right': False, 'left': False}
-    rect.x += movement[0]
-    hit_list = collision_test(rect, tiles)
-    for tile_elem in hit_list:
-        if movement[0] > 0:
-            rect.right = tile_elem.left
-            collision_types['right'] = True
-        elif movement[0] < 0:
-            rect.left = tile_elem.right
-            collision_types['left'] = True
-    rect.y += movement[1]
-    hit_list = collision_test(rect, tiles)
-    for tile_elem in hit_list:
-        if movement[1] > 0:
-            rect.bottom = tile_elem.top
-            collision_types['bottom'] = True
-        elif movement[1] < 0:
-            rect.top = tile_elem.bottom
-            collision_types['top'] = True
-    return rect, collision_types
 
 
 animation_duration = 200
@@ -174,6 +147,8 @@ levitating_blocks_animation = 8
 blocks_animation_reverse = False
 last_heal = pygame.time.get_ticks()
 HEAL_DELAY = 1500
+
+mobs = list()
 
 while True:
     if screen_status.screen == 'game':
@@ -264,6 +239,14 @@ while True:
                     map_objects.append(pygame.Rect(tile_x * 32, tile_y * 32, 32, 32))
                 x += 1
             y += 1
+
+        if random.randint(0, 1000) == 5:
+            print('mobb')
+            position = [random.choice(possible_x) * 32, random.choice(possible_y) * 32]
+            # position = [player.rect.x, player.rect.y]
+
+            mob = Entity(20, 20, 1, 2, 1, True, False, position, 32, 64, 8)
+            mobs.append(mob)
 
         for item in falling_items:
             rect = pygame.Rect(item["x"], item["y"], 16, 16)
@@ -412,10 +395,11 @@ while True:
         # player.draw(display, player_rect.x - scroll[0], player_rect.y - scroll[1])
 
         if holding_left_button:
-            map_objects, game_map, hold_start, falling_items = on_left_click(hold_pos, player.rect, map_objects, scroll, game_map,
-                                                              player,
-                                                              hold_start,
-                                                              blocks_data, falling_items)
+            map_objects, game_map, hold_start, falling_items = on_left_click(hold_pos, player.rect, map_objects, scroll,
+                                                                             game_map,
+                                                                             player,
+                                                                             hold_start,
+                                                                             blocks_data, falling_items)
 
         screen.blit(pygame.transform.scale(display, WINDOW_SIZE), (0, 0))
 
@@ -472,6 +456,8 @@ while True:
         draw_inventory(screen, player.inventory, width, height, inventory_font, player.selected_inventory_slot, images,
                        blocks_data)
         draw_health_bar(screen, player, width, height, icons)
+
+        draw_mobs(screen, player, mobs, possible_x, possible_y, scroll, map_objects, game_map)
 
         if screen_status.show_inventory:
             draw_expanded_inventory(screen, player.inventory, width, height, inventory_font,

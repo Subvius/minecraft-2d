@@ -6,6 +6,38 @@ import noise
 import pygame
 from lib.models.player import Player
 from lib.func.blocks import *
+from lib.models.entity import *
+
+
+def collision_test(rect, tiles):
+    hit_list = []
+    for tile_elem in tiles:
+        if rect.colliderect(tile_elem):
+            hit_list.append(tile_elem)
+    return hit_list
+
+
+def move(rect, movement, tiles):
+    collision_types = {'top': False, 'bottom': False, 'right': False, 'left': False}
+    rect.x += movement[0]
+    hit_list = collision_test(rect, tiles)
+    for tile_elem in hit_list:
+        if movement[0] > 0:
+            rect.right = tile_elem.left
+            collision_types['right'] = True
+        elif movement[0] < 0:
+            rect.left = tile_elem.right
+            collision_types['left'] = True
+    rect.y += movement[1]
+    hit_list = collision_test(rect, tiles)
+    for tile_elem in hit_list:
+        if movement[1] > 0:
+            rect.bottom = tile_elem.top
+            collision_types['bottom'] = True
+        elif movement[1] < 0:
+            rect.top = tile_elem.bottom
+            collision_types['top'] = True
+    return rect, collision_types
 
 
 def is_close(x, y, x0, y0, radius) -> bool:
@@ -81,6 +113,33 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
             print('доделать!!!!! (lib/models/map.py), line: 26')
 
     return map_objects, game_map, hold_start, falling_items
+
+
+def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possible_x: list[int], possible_y: list[int],
+              scroll: list[int], map_objects: list[pygame.Rect], game_map: list):
+    for mob in mobs:
+        rect = mob.rect
+        if rect.x // 32 in possible_x and rect.y // 32 in possible_y:
+            pygame.draw.rect(screen, "black",
+                             pygame.Rect(rect.x - scroll[0], rect.y - scroll[1], rect.width,
+                                         rect.height))
+        close = is_close(rect.x, rect.y, player.rect.x, player.rect.y, mob.trigger_radius)
+        if close:
+            mob.set_destination(player.rect.center)
+        else:
+            mob.set_destination(None)
+        destination = mob.destination
+
+        movement = [0, 0]
+        if destination is not None:
+            if rect.x < destination[0]:
+                movement[0] += 1 * mob.speed
+            elif rect.x > destination[0]:
+                movement[0] -= 1 * mob.speed
+        if game_map[rect.y // 32 + 1][rect.x // 32] == "0":
+            movement[1] += 1
+        rect, collisions = move(rect, movement, map_objects)
+        mob.rect = rect
 
 
 def draw_health_bar(screen, player: Player, width, height, icons):
