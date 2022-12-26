@@ -5,6 +5,7 @@ class Screen:
         self.world = None
         self.show_inventory = False
         self.dimension = "overworld"
+        self.mouse_pos = (0, 0)
 
     def change_scene(self, screen: str):
         """Changes screen to another. Can't be same as current"""
@@ -23,3 +24,6 @@ class Screen:
 
     def change_dimension(self, dimension):
         self.dimension = dimension
+
+    def set_mouse_pos(self, pos):
+        self.mouse_pos = pos

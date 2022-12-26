@@ -8,13 +8,17 @@ from lib.models.player import Player
 from lib.func.blocks import *
 
 
+def is_close(x, y, x0, y0, radius) -> bool:
+    return ((x - x0) ** 2 + (y - y0) ** 2) <= (radius * 32) ** 2
+
+
 def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Player):
     pos = event.pos
     x = pos[0]
     y = pos[1]
     # максимальная дистанция 4 блока (сторона 32)
-    is_close = ((x + scroll[0] - player_rect.x) ** 2 + (y + scroll[1] - player_rect.y) ** 2) <= (4 * 32) ** 2
-    if is_close:
+    close = is_close(x + scroll[0], y + scroll[1], player.rect.x, player.rect.y, 4)
+    if close:
         value_x = (x + scroll[0]) // 32
         value_y = (y + scroll[1]) // 32
         try:
@@ -38,8 +42,8 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
     x = pos[0]
     y = pos[1]
     # максимальная дистанция 4 блока (сторона 32)
-    is_close = ((x + scroll[0] - player_rect.x) ** 2 + (y + scroll[1] - player_rect.y) ** 2) <= (4 * 32) ** 2
-    if is_close:
+    close = is_close(x + scroll[0], y + scroll[1], player.rect.x, player.rect.y, 4)
+    if close:
         value_x = (x + scroll[0]) // 32
         value_y = (y + scroll[1]) // 32
         try:

@@ -244,6 +244,15 @@ while True:
                     block = blocks_data[block_id]
                     display.blit(images[block['item_id']], (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1]))
 
+                    mouse_coord = screen_status.mouse_pos
+                    mrect = pygame.Rect(mouse_coord[0], mouse_coord[1], 1, 1)
+                    rect = pygame.Rect(tile_x * 32 - scroll[0], tile_y * 32 - scroll[1], 32, 32)
+                    close = is_close(mouse_coord[0] + scroll[0], mouse_coord[1] + scroll[1], player.rect.x,
+                                     player.rect.y, 4)
+
+                    if mrect.colliderect(rect) and close:
+                        pygame.draw.rect(display, (232,115,104), rect, width=2)
+
                     if percentage:
                         image = pygame.image.load(
                             f'./lib/assets/animations/block_breaking/image'
@@ -664,6 +673,11 @@ while True:
                 text_field_focused = True
             else:
                 text_field_focused = False
+
+        if event.type == pygame.MOUSEMOTION and not screen_status.paused \
+                and screen_status.screen == 'game':
+            coord = event.pos
+            screen_status.set_mouse_pos(coord)
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not screen_status.paused \
                 and screen_status.screen == 'game':
