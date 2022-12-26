@@ -2,3 +2,4 @@ venv/
 **/__pychache__/
 alg.py
 .idea/
+**/.DS_Store/
