@@ -155,7 +155,7 @@ def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possib
         try:
             if game_map[rect.y // 32 + 1][rect.x // 32] == "0":
                 movement[1] += 1
-        except IndexError as e:
+        except IndexError:
             # Escaped from map :(
             pass
 
@@ -188,7 +188,6 @@ def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possib
 
 
 def draw_health_bar(screen, player: Player, width, height, icons):
-    inventory = player.inventory
     hp = player.hp
 
     for i in range(10):
@@ -352,7 +351,6 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
 
 def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimension):
     x_max = 8 * quantity_of_chunks
-    tile_size = 32
     game_map = [["0" for _ in range(x_max)] for _ in range(y_max)]
 
     mountains = [
@@ -401,9 +399,7 @@ def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimens
 
     if dimension == 'overworld':
         for tile_y in range(y_max):
-            y = tile_y * tile_size
             for tile_x in range(x_max):
-                x = tile_x * tile_size
 
                 # if 65 == tile_y:
                 #     value = random.randint(1, 1000)
@@ -471,9 +467,7 @@ def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimens
                     #             print()
     elif dimension == 'nether':
         for tile_y in range(y_max):
-            y = tile_y * tile_size
             for tile_x in range(x_max):
-                x = tile_x * tile_size
 
                 if tile_y == 0:
                     block = get_block_data_by_name(blocks_data, 'netherrack')

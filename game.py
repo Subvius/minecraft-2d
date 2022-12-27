@@ -687,7 +687,8 @@ while True:
             holding_left_button = False
             hold_end = datetime.datetime.now()
 
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and screen_status.screen == "game" and screen_status.show_inventory:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and screen_status.screen == "game"\
+                and screen_status.show_inventory:
             window_width = (288 - 50) * 1.25
             window_height = (256 - 30) * 1.25
             left = width // 2 - window_width // 2
