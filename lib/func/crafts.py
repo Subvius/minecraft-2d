@@ -5,17 +5,20 @@ def check_if_can_craft(four_slots: bool, slots: list, recipes: dict):
     for row in range(len(slots)):
         r_value = slots[row]
         for value in r_value:
-            a_slots[row] += " " if value is None else value['item_id']
+            item: str = value['item_id'] if value is not None else " "
+            if item.endswith("planks"):
+                item = item.split("_")[1]
+            a_slots[row] += " " if value is None else item
         a_slots[row] = a_slots[row].replace(" ", "")
         if a_slots[row] == "":
             rows_to_pop.append(row)
-
-    for row in rows_to_pop:
+    for row in rows_to_pop[::-1]:
         try:
             a_slots.pop(row)
         except IndexError:
             pass
-
+    if not a_slots:
+        return [False]
     for value in recipes:
         pattern = recipes[value].get("pattern", None)
         ingredients = recipes[value].get("ingredients", None)
@@ -26,12 +29,15 @@ def check_if_can_craft(four_slots: bool, slots: list, recipes: dict):
                         if recipes[value]['key'][kk].get('item', None) is not None:
                             for row in range(len(pattern)):
                                 pattern[row] = pattern[row].replace(kk, recipes[value]['key'][kk]['item'])
+                        elif recipes[value]['key'][kk].get('tag', None) is not None:
+                            for row in range(len(pattern)):
+                                pattern[row] = pattern[row].replace(kk, recipes[value]['key'][kk]['tag'])
                     except AttributeError:
                         print(value)
 
             if pattern == a_slots:
                 print('exists', value)
-                return True, value
+                return True, value, recipes[value]
         elif ingredients is not None:
             if recipes[value].get("ingredients", [])[0].get("tag", None) is not None:
                 ingredients = [el.get("tag", "").rstrip("s")

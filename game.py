@@ -78,6 +78,7 @@ for block in list(blocks_data.values()):
     images.update({block['item_id']: pygame.image.load(f"lib/assets/{block['image_root']}")})
 images.update({"main_screen_bg": pygame.image.load("lib/assets/main_screen_bg.jpg")})
 images.update({"world_select_bg": pygame.image.load("lib/assets/world_select_bg.jpg")})
+images.update({"no_textures": pygame.image.load("lib/assets/no_textures.webp")})
 
 for file in os.listdir("lib/assets/icons"):
     if file.endswith(".webp"):
@@ -262,7 +263,7 @@ while True:
                 x += 1
             y += 1
 
-        if random.randint(0, 1000) == 5:
+        if random.randint(0, 1000) == 5 and screen_status.world_time > 36_000:
             position = [random.choice(possible_x) * 32, random.choice(possible_y) * 32]
             # position = [player.rect.x, player.rect.y]
 
@@ -488,6 +489,10 @@ while True:
             draw_expanded_inventory(screen, player.inventory, width, height, inventory_font,
                                     images,
                                     blocks_data, inventory_crafting_slots, craft_result)
+        if screen_status.inventories.get("crafting_table", False):
+            draw_crafting_table_inventory(screen, player.inventory, width, height, inventory_font,
+                                          images,
+                                          blocks_data, crafting_table_slots, craft_result, main_screen_font)
 
         if selected_item is not None:
             screen.blit(pygame.transform.scale(images[selected_item['item_id']], (24, 24)),
@@ -712,7 +717,8 @@ while True:
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not screen_status.paused \
                 and screen_status.screen == 'game':
-            map_objects, game_map = on_right_click(event, player.rect, map_objects, scroll, game_map, player)
+            map_objects, game_map = on_right_click(event, player.rect, map_objects, scroll, game_map, player,
+                                                   screen_status)
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not screen_status.paused \
                 and screen_status.screen == 'game':
             holding_left_button = True
@@ -724,7 +730,7 @@ while True:
             hold_end = datetime.datetime.now()
 
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and screen_status.screen == "game" \
-                and screen_status.show_inventory:
+                and (screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]):
             window_width = (288 - 50) * 1.25
             window_height = (256 - 30) * 1.25
             left = width // 2 - window_width // 2
@@ -793,8 +799,8 @@ while True:
                                                                  numerical_id=selected_item['numerical_id'],
                                                                  quantity=selected_item['quantity'])
                         selected_item = None
-                elif (10 + 4 * 30 + 1 * 4 + 20) <= mx - left <= (10 + 4 * 30 + 1 * 4 + 20) + 2 * 30 + 1 * 2 and (
-                        11 + 32) <= my - top <= (11 + 32) + 30 * 2 + 1 * 2:
+                if (10 + 4 * 30 + 1 * 4 + 20) <= mx - left <= (10 + 4 * 30 + 1 * 4 + 20) + 2 * 30 + 1 * 2 and (
+                        11 + 32) <= my - top <= (11 + 32) + 30 * 2 + 1 * 2 and screen_status.show_inventory:
                     size = 30
                     column = int(mx - left - (10 + 4 * 30 + 1 * 4 + 20)) // size
                     row = int((my - top - (11 + 32)) // size)
@@ -811,6 +817,7 @@ while True:
                         inventory_crafting_slots[row][column] = None
 
                     res = check_if_can_craft(True, inventory_crafting_slots, recipes)
+                    print(res)
                     if res[0]:
                         craft_result = res[2]
                         print(craft_result)
@@ -819,7 +826,7 @@ while True:
                 elif (10 + 4 * 30 + 1 * 4 + 20) + 1 * 30 + 1 * 1 + 68 <= mx - left <= (
                         10 + 4 * 30 + 1 * 4 + 20) + 1 * 30 + 1 * 1 + 98 and (
                         11 + 30) + 30 * 1 + 1 * 1 - 15 <= my - top <= (
-                        11 + 30) + 30 * 1 + 1 * 1 + 15:
+                        11 + 30) + 30 * 1 + 1 * 1 + 15 and screen_status.show_inventory:
                     if craft_result is not None:
                         block = get_block_data_by_name(blocks_data, craft_result['result']['item'])
                         selected_item = {
@@ -847,13 +854,40 @@ while True:
                         else:
                             craft_result = None
 
-        if event.type == pygame.MOUSEMOTION and screen_status.screen == "game" and screen_status.show_inventory \
+                if 41 <= mx - left <= 41 + 3 * 30 + 1 * 3 and 25 <= my - top <= 25 + 30 * 3 + 1 * 3 \
+                        and screen_status.inventories.get("crafting_table", False):
+                    size = 30
+                    column = int(mx - left - 41) // size
+                    row = int((my - top - 25) // size)
+                    if crafting_table_slots[row][column] is None and selected_item is not None:
+                        crafting_table_slots[row][column] = {
+                            'item_id': selected_item["item_id"], 'quantity': selected_item["quantity"],
+                            'type': selected_item["type"], 'numerical_id': selected_item["numerical_id"]
+                        }
+                        selected_item = None
+                    elif crafting_table_slots[row][column] is not None and selected_item is None:
+                        selected_item = crafting_table_slots[row][column]
+                        selected_item["x"] = mx
+                        selected_item["y"] = my
+                        crafting_table_slots[row][column] = None
+
+                    res = check_if_can_craft(False, crafting_table_slots, recipes)
+                    print(res)
+                    if res[0]:
+                        craft_result = res[2]
+                        print(craft_result)
+                    else:
+                        craft_result = None
+
+        if event.type == pygame.MOUSEMOTION and screen_status.screen == "game" and (
+                screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]) \
                 and selected_item is not None:
             rel = event.pos
             selected_item["x"] = rel[0]
             selected_item["y"] = rel[1]
 
-        if event.type == pygame.MOUSEWHEEL and screen_status.screen == "game" and not screen_status.show_inventory:
+        if event.type == pygame.MOUSEWHEEL and screen_status.screen == "game" and (
+                not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
             player.set_selected_slot(player.selected_inventory_slot - event.y)
 
         if event.type == KEYDOWN and screen_status.screen == 'game':

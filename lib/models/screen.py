@@ -4,6 +4,10 @@ class Screen:
         self.paused = paused
         self.world = None
         self.show_inventory = False
+        self.inventories = {
+            "crafting_table": False,
+            "furnace": False,
+        }
         self.dimension = "overworld"
         self.mouse_pos = (0, 0)
         self.world_time = 0
@@ -20,8 +24,22 @@ class Screen:
     def set_world(self, world):
         self.world = world
 
-    def toggle_inventory(self):
-        self.show_inventory = not self.show_inventory
+    def toggle_inventory(self, inventory=None):
+        if inventory is None:
+            toggled = False
+            for inv in self.inventories:
+                if self.inventories[inv]:
+                    self.inventories[inv] = not self.inventories[inv]
+                    toggled = True
+                    self.toggle_pause()
+                    break
+            if not toggled:
+                self.show_inventory = not self.show_inventory
+        else:
+            try:
+                self.inventories[inventory] = not self.inventories[inventory]
+            except KeyError:
+                print('INVALID INVENTORY NAME -' + inventory)
 
     def change_dimension(self, dimension):
         self.dimension = dimension

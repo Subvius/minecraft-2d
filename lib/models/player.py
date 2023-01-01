@@ -69,3 +69,4 @@ class Player:
 
         if self.hp <= 0:
             self.is_dead = True
+            self.hp = 0

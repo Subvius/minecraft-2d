@@ -46,7 +46,7 @@ def is_close(x, y, x0, y0, radius) -> bool:
     return ((x - x0) ** 2 + (y - y0) ** 2) <= (radius * 32) ** 2
 
 
-def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Player):
+def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Player, screen_status):
     pos = event.pos
     x = pos[0]
     y = pos[1]
@@ -66,6 +66,8 @@ def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Pl
                         game_map[value_y][value_x] = selected['numerical_id']
                         map_objects.append(pygame.Rect(value_x * 32, value_y * 32, 32, 32))
                         player.remove_from_inventory(player.selected_inventory_slot, 1)
+            elif tile == "58":
+                screen_status.toggle_inventory("crafting_table")
         except IndexError:
             print('доделать!!!!! (lib/models/map.py), line: 26')
 
@@ -209,6 +211,10 @@ def draw_health_bar(screen, player: Player, width, height, icons):
         screen.blit(pygame.transform.scale(icon, (32 * 0.4, 32 * 0.4)), (rect.x, rect.y))
 
 
+def draw_shadows(x: int, y: int, x1: int, y1: int, screen: pygame.Surface, color="white"):
+    pygame.draw.line(screen, color, (x, y), (x1, y1))
+
+
 def draw_inventory(screen, inventory, width, height, font, selected_slot, images, blocks_data):
     color = (0, 10, 0)
     # selected_color = (145, 145, 145)
@@ -242,12 +248,10 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
     pygame.draw.rect(screen, background_color,
                      pygame.Rect(left, top, window_width, window_height))
 
-    pygame.draw.line(screen, "white", (left, top), (left + window_width, top))
-    pygame.draw.line(screen, "white", (left, top), (left, top + window_height))
-    pygame.draw.line(screen, "black", (left + window_width, top),
-                     (left + window_width, top + window_height))
-    pygame.draw.line(screen, "black", (left, top + window_height),
-                     (left + window_width, top + window_height))
+    draw_shadows(*(left, top), *(left + window_width, top), screen)
+    draw_shadows(*(left, top), *(left, top + window_height), screen)
+    draw_shadows(*(left + window_width, top), *(left + window_width, top + window_height), screen, "black")
+    draw_shadows(*(left, top + window_height), *(left + window_width, top + window_height), screen, "black")
 
     # Armor render
     for i in range(4):
@@ -255,10 +259,11 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
         x = 10
         pygame.draw.rect(screen, tile_color,
                          pygame.Rect(left + x, top + y, 28, 28))
-        pygame.draw.line(screen, "black", (left + x, top + y), (left + x + 28, top + y))
-        pygame.draw.line(screen, "black", (left + x, top + y), (left + x, top + y + 28))
-        pygame.draw.line(screen, "white", (left + x, top + y + 28), (left + x + 28, top + y + 28))
-        pygame.draw.line(screen, "white", (left + x + 28, top + y), (left + x + 28, top + y + 28))
+
+        draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
+        draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
+        draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
+        draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
 
         if inventory[4][i] is not None:
             block = blocks_data[inventory[4][i]['numerical_id']]
@@ -273,17 +278,17 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
             y = (42 + 3 * tile_size + 1 * 3) + 10 + tile_size * tile_y + 1 * tile_y
             pygame.draw.rect(screen, tile_color,
                              pygame.Rect(left + x, top + y, 28, 28))
-            pygame.draw.line(screen, "black", (left + x, top + y), (left + x + 28, top + y))
-            pygame.draw.line(screen, "black", (left + x, top + y), (left + x, top + y + 28))
-            pygame.draw.line(screen, "white", (left + x, top + y + 28), (left + x + 28, top + y + 28))
-            pygame.draw.line(screen, "white", (left + x + 28, top + y), (left + x + 28, top + y + 28))
+            draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
+            draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
+            draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
+            draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
 
             if inventory[tile_y + 1][tile_x] is not None:
                 block = blocks_data[inventory[tile_y + 1][tile_x]['numerical_id']]
                 screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
                             (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
 
-                text_surface = font.render(f"{inventory[tile_y + 1][tile_x]['quantity']}", False,
+                text_surface = font.render(f"{inventory[tile_y + 1][tile_x].get('quantity', 1)}", False,
                                            "white")
 
                 screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
@@ -295,17 +300,17 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
         x = 10 + i * tile_size + 1 * i
         pygame.draw.rect(screen, tile_color,
                          pygame.Rect(left + x, top + y, 28, 28))
-        pygame.draw.line(screen, "black", (left + x, top + y), (left + x + 28, top + y))
-        pygame.draw.line(screen, "black", (left + x, top + y), (left + x, top + y + 28))
-        pygame.draw.line(screen, "white", (left + x, top + y + 28), (left + x + 28, top + y + 28))
-        pygame.draw.line(screen, "white", (left + x + 28, top + y), (left + x + 28, top + y + 28))
+        draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
+        draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
+        draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
+        draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
 
         if inventory[0][i] is not None:
             block = blocks_data[inventory[0][i]['numerical_id']]
             screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
                         (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
 
-            text_surface = font.render(f"{inventory[0][i]['quantity']}", False,
+            text_surface = font.render(f"{inventory[0][i].get('quantity', 1)}", False,
                                        "white")
 
             screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
@@ -317,10 +322,10 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
     pl_height = 28 * 4 + 9
     pygame.draw.rect(screen, "black",
                      pygame.Rect(left + x, top + y, pl_width, pl_height))
-    pygame.draw.line(screen, "black", (left + x, top + y), (left + x + pl_width, top + y))
-    pygame.draw.line(screen, "black", (left + x, top + y), (left + x, top + y + pl_height))
-    pygame.draw.line(screen, "white", (left + x, top + y + pl_height), (left + x + pl_width, top + y + pl_height))
-    pygame.draw.line(screen, "white", (left + x + pl_width, top + y), (left + x + pl_width, top + y + pl_height))
+    draw_shadows(*(left + x, top + y + pl_height), *(left + x + pl_width, top + y + pl_height), screen)
+    draw_shadows(*(left + x + pl_width, top + y), *(left + x + pl_width, top + y + pl_height), screen)
+    draw_shadows(*(left + x, top + y), *(left + x + pl_width, top + y), screen, "black")
+    draw_shadows(*(left + x, top + y), *(left + x, top + y + pl_height), screen, "black")
 
     # Craft area render
     for tile_x in range(2):
@@ -329,10 +334,10 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
             y = (11 + 32) + tile_size * tile_y + 1 * tile_y
             pygame.draw.rect(screen, tile_color,
                              pygame.Rect(left + x, top + y, 28, 28))
-            pygame.draw.line(screen, "black", (left + x, top + y), (left + x + 28, top + y))
-            pygame.draw.line(screen, "black", (left + x, top + y), (left + x, top + y + 28))
-            pygame.draw.line(screen, "white", (left + x, top + y + 28), (left + x + 28, top + y + 28))
-            pygame.draw.line(screen, "white", (left + x + 28, top + y), (left + x + 28, top + y + 28))
+            draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
+            draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
+            draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
+            draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
 
             if inventory_crafting_slots[tile_y][tile_x] is not None:
                 block = blocks_data[inventory_crafting_slots[tile_y][tile_x]['numerical_id']]
@@ -344,6 +349,7 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
 
                 screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
 
+    # Arrow
     x = (10 + 4 * tile_size + 1 * 4 + 20) + 1 * tile_size + 1 * 1 + 33
     y = (11 + tile_size) + tile_size * 1 + 1 * 1 - 2
     pygame.draw.rect(screen, tile_color, pygame.Rect(left + x, top + y, 25, 4))
@@ -362,18 +368,157 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
         count = result.get("count", 1)
 
         block = get_block_data_by_name(blocks_data, item)
-        screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
-                    (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+        if block is not None:
+            screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
+                        (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+        else:
+            screen.blit(pygame.transform.scale(images["no_textures"], (block_size, block_size)),
+                        (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
 
         text_surface = font.render(f"{count}", False,
                                    "white")
 
         screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
 
-    pygame.draw.line(screen, "black", (left + x, top + y), (left + x + 28, top + y))
-    pygame.draw.line(screen, "black", (left + x, top + y), (left + x, top + y + 28))
-    pygame.draw.line(screen, "white", (left + x, top + y + 28), (left + x + 28, top + y + 28))
-    pygame.draw.line(screen, "white", (left + x + 28, top + y), (left + x + 28, top + y + 28))
+    draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
+    draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
+    draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
+    draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
+
+
+def draw_crafting_table_inventory(screen, inventory, width, height, font, images, blocks_data,
+                                  crafting_slots: list, craft_result: dict, text_font):
+    window_width = (288 - 50) * 1.25
+    window_height = (256 - 30) * 1.25
+    left = width // 2 - window_width // 2
+    top = height // 2 - window_height // 2
+    # Palette
+    tile_color = (160, 160, 160)
+    tile_size = 30
+    block_size = 22
+    background_color = (215, 215, 215)
+    pygame.draw.rect(screen, background_color,
+                     pygame.Rect(left, top, window_width, window_height))
+
+    draw_shadows(*(left, top), *(left + window_width, top), screen)
+    draw_shadows(*(left, top), *(left, top + window_height), screen)
+    draw_shadows(*(left + window_width, top), *(left + window_width, top + window_height), screen, "black")
+    draw_shadows(*(left, top + window_height), *(left + window_width, top + window_height), screen, "black")
+
+    text_surface = text_font.render(f"Inventory", False,
+                               tile_color)
+
+    screen.blit(text_surface, (left + 10, top + (42 + 3 * tile_size + 1 * 3) - 12))
+
+
+
+    # Slots render
+    slot_number = 0
+    for tile_y in range(3):
+        for tile_x in range(9):
+            x = 10 + tile_x * tile_size + 1 * tile_x
+            y = (42 + 3 * tile_size + 1 * 3) + 10 + tile_size * tile_y + 1 * tile_y
+            pygame.draw.rect(screen, tile_color,
+                             pygame.Rect(left + x, top + y, 28, 28))
+            draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
+            draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
+            draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
+            draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
+
+            if inventory[tile_y + 1][tile_x] is not None:
+                block = blocks_data[inventory[tile_y + 1][tile_x]['numerical_id']]
+                screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
+                            (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+
+                text_surface = font.render(f"{inventory[tile_y + 1][tile_x].get('quantity', 1)}", False,
+                                           "white")
+
+                screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
+            slot_number += 1
+
+    # Hotbar render
+    for i in range(9):
+        y = ((42 + 3 * tile_size + 1 * 3) + 10 + tile_size * 2 + 1 * 2) + 40
+        x = 10 + i * tile_size + 1 * i
+        pygame.draw.rect(screen, tile_color,
+                         pygame.Rect(left + x, top + y, 28, 28))
+        draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
+        draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
+        draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
+        draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
+
+        if inventory[0][i] is not None:
+            block = blocks_data[inventory[0][i]['numerical_id']]
+            screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
+                        (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+
+            text_surface = font.render(f"{inventory[0][i].get('quantity', 1)}", False,
+                                       "white")
+
+            screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
+
+    text_surface = text_font.render(f"Crafting", False,
+                                    tile_color)
+
+    screen.blit(text_surface, (left + 41, top + 2))
+
+    # Craft area render
+    for tile_x in range(3):
+        for tile_y in range(3):
+            x = 41 + tile_x * tile_size + 1 * tile_x
+            y = 25 + tile_size * tile_y + 1 * tile_y
+            pygame.draw.rect(screen, tile_color,
+                             pygame.Rect(left + x, top + y, 28, 28))
+            draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
+            draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
+            draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
+            draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
+
+            if crafting_slots[tile_y][tile_x] is not None:
+                block = blocks_data[crafting_slots[tile_y][tile_x]['numerical_id']]
+                screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
+                            (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+
+                text_surface = font.render(f"{crafting_slots[tile_y][tile_x]['quantity']}", False,
+                                           "white")
+
+                screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
+
+    # Arrow
+    x = (10 + 4 * tile_size + 1 * 4 + 20) - 5
+    y = (11 + tile_size) + tile_size * 1 + 1 * 1 - 2
+    pygame.draw.rect(screen, tile_color, pygame.Rect(left + x, top + y, 25, 4))
+    step = 1
+    for index in range(12):
+        pygame.draw.line(screen, tile_color, (left + x + tile_size - 11 + index * 1, top + y - 9 + index * step),
+                         (left + x + tile_size - 11 + index * 1, top + y + 13 - index * step))
+
+    x = (10 + 4 * tile_size + 1 * 4 + 20) + 68 - 33
+    y = (11 + tile_size) + tile_size * 1 + 1 * 1 - 15
+    pygame.draw.rect(screen, tile_color,
+                     pygame.Rect(left + x, top + y, 28, 28))
+    if craft_result is not None:
+        result = craft_result.get("result")
+        item = result['item']
+        count = result.get("count", 1)
+
+        block = get_block_data_by_name(blocks_data, item)
+        if block is not None:
+            screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
+                        (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+        else:
+            screen.blit(pygame.transform.scale(images["no_textures"], (block_size, block_size)),
+                        (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+
+        text_surface = font.render(f"{count}", False,
+                                   "white")
+
+        screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
+
+    draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
+    draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
+    draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
+    draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
 
 
 def draw_sun(screen: pygame.Surface, screen_status: lib.models.screen.Screen, icons: dict[str: pygame.Surface]):
