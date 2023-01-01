@@ -6,6 +6,7 @@ class Screen:
         self.show_inventory = False
         self.dimension = "overworld"
         self.mouse_pos = (0, 0)
+        self.world_time = 0
 
     def change_scene(self, screen: str):
         """Changes screen to another. Can't be same as current"""
@@ -27,3 +28,14 @@ class Screen:
 
     def set_mouse_pos(self, pos):
         self.mouse_pos = pos
+
+    def reset_world_time(self):
+        self.world_time = 0
+
+    def set_world_time(self, ticks: int):
+        self.world_time = ticks
+
+    def update_world_time(self):
+        self.world_time += 1
+        if self.world_time > 48_000:
+            self.reset_world_time()

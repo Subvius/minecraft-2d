@@ -14,6 +14,7 @@ from lib.models.player import *
 from lib.models.screen import *
 from lib.models.buttons import *
 from lib.models.cave_monster import *
+from lib.func.crafts import *
 
 clock = pygame.time.Clock()
 
@@ -55,6 +56,13 @@ hold_start = datetime.datetime.now()
 hold_end = datetime.datetime.now()
 hold_pos = [0, 0]
 
+crafting_table_slots = [[None for _ in range(3)] for __ in range(3)]
+inventory_crafting_slots = [[None for _ in range(2)] for __ in range(2)]
+craft_result = None
+with open('lib/storage/recipes.json', "r") as f:
+    recipes = json.load(f)
+    f.close()
+
 vertical_momentum = 0
 air_timer = 0
 
@@ -75,6 +83,8 @@ for file in os.listdir("lib/assets/icons"):
     if file.endswith(".webp"):
         icons.update({f"{file.split('.')[0]}": pygame.image.load(f"lib/assets/icons/{file}")})
 
+icons.update({"sun": pygame.image.load("lib/assets/sun.png")})
+icons.update({"moon": pygame.image.load("lib/assets/moon.png")})
 screen_status = Screen()
 
 falling_items = []
@@ -167,6 +177,8 @@ while True:
         elif screen_status.dimension == 'nether':
             display.fill((88, 30, 65))
 
+        screen_status.update_world_time()
+
         # update player image
         current_time = pygame.time.get_ticks()
         if current_time - last_update >= animation_duration:
@@ -226,7 +238,8 @@ while True:
 
                 if block_id != '0' and not tile.count(":"):
                     block = blocks_data[block_id]
-                    display.blit(images[block['item_id']], (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1]))
+                    display.blit(pygame.transform.scale(images[block['item_id']], (32, 32)),
+                                 (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1]))
 
                     mouse_coord = screen_status.mouse_pos
                     mrect = pygame.Rect(mouse_coord[0], mouse_coord[1], 1, 1)
@@ -468,10 +481,13 @@ while True:
 
         mobs = draw_mobs(screen, player, mobs, possible_x, possible_y, scroll, map_objects, game_map, mob_images)
 
+        if screen_status.dimension == "overworld":
+            draw_sun(screen, screen_status, icons)
+
         if screen_status.show_inventory:
             draw_expanded_inventory(screen, player.inventory, width, height, inventory_font,
                                     images,
-                                    blocks_data)
+                                    blocks_data, inventory_crafting_slots, craft_result)
 
         if selected_item is not None:
             screen.blit(pygame.transform.scale(images[selected_item['item_id']], (24, 24)),
@@ -529,6 +545,9 @@ while True:
                     data_json[str(screen_status.world[1])]["player_inventory"] = player.inventory
                     data_json[str(screen_status.world[1])]["player_hp"] = player.hp
                     data_json[str(screen_status.world[1])]['player_coord'] = (player.rect.x, player.rect.y)
+                    data_json[str(screen_status.world[1])]['world_time'] = screen_status.world_time
+                    data_json[str(screen_status.world[1])]['dimension'] = 'overworld'
+
                     with open("lib/storage/worlds_data.json", "w") as f:
                         json.dump(data_json, f)
                 else:
@@ -546,6 +565,8 @@ while True:
 
                     data_json[str(screen_status.world[1])]["player_inventory"] = player.inventory
                     data_json[str(screen_status.world[1])]["player_hp"] = player.hp
+                    data_json[str(screen_status.world[1])]['world_time'] = screen_status.world_time
+                    data_json[str(screen_status.world[1])]['dimension'] = 'nether'
                     with open("lib/storage/worlds_data.json", "w") as f:
                         json.dump(data_json, f)
 
@@ -610,12 +631,27 @@ while True:
                     screen_status.toggle_pause()
                     with open("lib/storage/worlds_data.json", "r") as f:
                         data_json = json.load(f)
-                    game_map = data_json[str(world[1])]["blocks"]
-                    coords = data_json[str(world[1])]["player_coord"]
-                    player.inventory = data_json[str(world[1])].get("player_inventory", player.inventory)
-                    player.hp = data_json[str(world[1])].get("player_hp", player.max_hp)
-                    player.rect.x = coords[0]
-                    player.rect.y = coords[1]
+                    data = data_json[str(world[1])]
+                    dimension = data.get('dimension', "overworld")
+                    player.inventory = data.get("player_inventory", player.inventory)
+                    player.hp = data.get("player_hp", player.max_hp)
+                    if dimension == 'overworld':
+                        coords = data["player_coord"]
+
+                        player.rect.x = coords[0]
+                        player.rect.y = coords[1]
+                        game_map = data["blocks"]
+                    elif dimension == 'nether':
+                        with open("lib/storage/nether_worlds_data.json", "r") as f:
+                            data_json = json.load(f)
+                        nether_data = data_json[str(world[1])]
+                        coords = nether_data["player_coord"]
+                        player.rect.x = coords[0]
+                        player.rect.y = coords[1]
+                        game_map = nether_data["blocks"]
+                        screen_status.change_dimension("nether")
+
+                    screen_status.set_world_time(int(data.get('world_time', 0)))
 
         elif event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'create_world':
             btn = None
@@ -687,7 +723,7 @@ while True:
             holding_left_button = False
             hold_end = datetime.datetime.now()
 
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and screen_status.screen == "game"\
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and screen_status.screen == "game" \
                 and screen_status.show_inventory:
             window_width = (288 - 50) * 1.25
             window_height = (256 - 30) * 1.25
@@ -757,6 +793,59 @@ while True:
                                                                  numerical_id=selected_item['numerical_id'],
                                                                  quantity=selected_item['quantity'])
                         selected_item = None
+                elif (10 + 4 * 30 + 1 * 4 + 20) <= mx - left <= (10 + 4 * 30 + 1 * 4 + 20) + 2 * 30 + 1 * 2 and (
+                        11 + 32) <= my - top <= (11 + 32) + 30 * 2 + 1 * 2:
+                    size = 30
+                    column = int(mx - left - (10 + 4 * 30 + 1 * 4 + 20)) // size
+                    row = int((my - top - (11 + 32)) // size)
+                    if inventory_crafting_slots[row][column] is None and selected_item is not None:
+                        inventory_crafting_slots[row][column] = {
+                            'item_id': selected_item["item_id"], 'quantity': selected_item["quantity"],
+                            'type': selected_item["type"], 'numerical_id': selected_item["numerical_id"]
+                        }
+                        selected_item = None
+                    elif inventory_crafting_slots[row][column] is not None and selected_item is None:
+                        selected_item = inventory_crafting_slots[row][column]
+                        selected_item["x"] = mx
+                        selected_item["y"] = my
+                        inventory_crafting_slots[row][column] = None
+
+                    res = check_if_can_craft(True, inventory_crafting_slots, recipes)
+                    if res[0]:
+                        craft_result = res[2]
+                        print(craft_result)
+                    else:
+                        craft_result = None
+                elif (10 + 4 * 30 + 1 * 4 + 20) + 1 * 30 + 1 * 1 + 68 <= mx - left <= (
+                        10 + 4 * 30 + 1 * 4 + 20) + 1 * 30 + 1 * 1 + 98 and (
+                        11 + 30) + 30 * 1 + 1 * 1 - 15 <= my - top <= (
+                        11 + 30) + 30 * 1 + 1 * 1 + 15:
+                    if craft_result is not None:
+                        block = get_block_data_by_name(blocks_data, craft_result['result']['item'])
+                        selected_item = {
+                            "item_id": block['item_id'],
+                            "numerical_id": block['numerical_id'],
+                            "quantity": craft_result['result'].get("count", 1),
+                            'x': mx,
+                            'y': my,
+                            "type": 'block' if block.get("material", None) is not None else "item"
+                        }
+                        for row in inventory_crafting_slots:
+                            row_index = inventory_crafting_slots.index(row)
+                            for slot in row:
+                                slot_index = row.index(slot)
+                                if slot is not None:
+                                    slot["quantity"] -= 1
+                                    if slot['quantity'] <= 0:
+                                        inventory_crafting_slots[row_index][slot_index] = None
+                                    else:
+                                        inventory_crafting_slots[row_index][slot_index] = slot
+
+                        res = check_if_can_craft(True, inventory_crafting_slots, recipes)
+                        if res[0]:
+                            craft_result = res[2]
+                        else:
+                            craft_result = None
 
         if event.type == pygame.MOUSEMOTION and screen_status.screen == "game" and screen_status.show_inventory \
                 and selected_item is not None:
@@ -772,6 +861,7 @@ while True:
                 screen_status.toggle_inventory()
                 screen_status.toggle_pause()
                 moving_left = moving_right = False
+                craft_result = None
         if event.type == KEYDOWN and not screen_status.paused \
                 and screen_status.screen == 'game':
             if event.key == K_RIGHT or event.key == pygame.K_d:

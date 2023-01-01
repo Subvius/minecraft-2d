@@ -4,6 +4,8 @@ import random
 
 import noise
 import pygame
+
+import lib.models.screen
 from lib.models.player import Player
 from lib.func.blocks import *
 from lib.models.entity import *
@@ -226,7 +228,8 @@ def draw_inventory(screen, inventory, width, height, font, selected_slot, images
             screen.blit(text_surface, (rect.x + 16, rect.y + 16))
 
 
-def draw_expanded_inventory(screen, inventory, width, height, font, images, blocks_data):
+def draw_expanded_inventory(screen, inventory, width, height, font, images, blocks_data,
+                            inventory_crafting_slots: list, craft_result: dict):
     window_width = (288 - 50) * 1.25
     window_height = (256 - 30) * 1.25
     left = width // 2 - window_width // 2
@@ -331,6 +334,16 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
             pygame.draw.line(screen, "white", (left + x, top + y + 28), (left + x + 28, top + y + 28))
             pygame.draw.line(screen, "white", (left + x + 28, top + y), (left + x + 28, top + y + 28))
 
+            if inventory_crafting_slots[tile_y][tile_x] is not None:
+                block = blocks_data[inventory_crafting_slots[tile_y][tile_x]['numerical_id']]
+                screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
+                            (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+
+                text_surface = font.render(f"{inventory_crafting_slots[tile_y][tile_x]['quantity']}", False,
+                                           "white")
+
+                screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
+
     x = (10 + 4 * tile_size + 1 * 4 + 20) + 1 * tile_size + 1 * 1 + 33
     y = (11 + tile_size) + tile_size * 1 + 1 * 1 - 2
     pygame.draw.rect(screen, tile_color, pygame.Rect(left + x, top + y, 25, 4))
@@ -343,10 +356,41 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
     y = (11 + tile_size) + tile_size * 1 + 1 * 1 - 15
     pygame.draw.rect(screen, tile_color,
                      pygame.Rect(left + x, top + y, 28, 28))
+    if craft_result is not None:
+        result = craft_result.get("result")
+        item = result['item']
+        count = result.get("count", 1)
+
+        block = get_block_data_by_name(blocks_data, item)
+        screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
+                    (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+
+        text_surface = font.render(f"{count}", False,
+                                   "white")
+
+        screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
+
     pygame.draw.line(screen, "black", (left + x, top + y), (left + x + 28, top + y))
     pygame.draw.line(screen, "black", (left + x, top + y), (left + x, top + y + 28))
     pygame.draw.line(screen, "white", (left + x, top + y + 28), (left + x + 28, top + y + 28))
     pygame.draw.line(screen, "white", (left + x + 28, top + y), (left + x + 28, top + y + 28))
+
+
+def draw_sun(screen: pygame.Surface, screen_status: lib.models.screen.Screen, icons: dict[str: pygame.Surface]):
+    world_time = screen_status.world_time
+    DAY_TIME = 36_000
+    NIGHT_TIME = 12_000
+    Y_MAX = 200
+    Y_MIN = 100
+    day_night_cycle_percent = world_time / DAY_TIME * 100 if world_time / DAY_TIME * 100 <= 100 else \
+        (world_time - DAY_TIME) / NIGHT_TIME * 100
+    width, height = screen.get_width(), screen.get_height()
+    image = icons["sun"] if world_time / DAY_TIME * 100 <= 100 else icons["moon"]
+
+    pos = (width // 100 * day_night_cycle_percent, (
+            Y_MAX - Y_MAX // 100 * day_night_cycle_percent) if day_night_cycle_percent <= 50 else \
+        Y_MIN + Y_MAX // 100 * (day_night_cycle_percent - 50))
+    screen.blit(pygame.transform.scale(image, (64, 64)), pos)
 
 
 def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimension):
@@ -390,11 +434,10 @@ def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimens
 
     trees = [
         """ 1111
- 1110111
-111101111
-    0
-    0
-        """
+ 1112111
+111121111
+    2
+    2"""
     ]
 
     if dimension == 'overworld':
@@ -442,7 +485,7 @@ def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimens
                     # value = random.randint(1, 1000)
                     height = math.floor(noise.pnoise1(tile_x * 0.1, repeat=9999999) * (seed ** 0.5))
 
-                    if tile_y <= (70 + 65) // 2 - height:
+                    if tile_y <= (70 + 65) // 2 - height and game_map[tile_y][tile_x] == "0":
                         game_map[tile_y][tile_x] = "1"
                     # if 1 <= value <= 30:
                     #     if game_map[tile_y - 1][tile_x] != "0":
@@ -465,6 +508,30 @@ def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimens
                     #                     # мы вышли за границу карты
                     #                     pass
                     #             print()
+
+                if game_map[tile_y][tile_x - 5] == "0" and game_map[tile_y - 1][tile_x - 5] != "0" \
+                        and 70 >= tile_y >= 65:
+                    value = random.randint(1, 1000)
+                    if 0 <= value <= 100:
+                        tree = random.choice(trees)
+                        tree = tree.replace(' ', "0")
+                        tree = tree.split("\n")
+                        tree = tree[::-1]
+                        print(tree)
+
+                        for y_adder in range(len(tree)):
+                            for x_adder in range(len(tree[2])):
+                                try:
+                                    current = tree[y_adder][x_adder]
+                                    if current != "0":
+                                        game_map[tile_y + y_adder][
+                                            tile_x - 5 - len(tree[
+                                                                 0]) + x_adder] = "18" if current == "1" \
+                                            else "17"
+                                except IndexError:
+                                    # мы вышли за границу карты
+                                    pass
+
     elif dimension == 'nether':
         for tile_y in range(y_max):
             for tile_x in range(x_max):
