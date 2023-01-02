@@ -188,6 +188,62 @@
     "diggable": 1,
     "material": "wood"
   },
+  "263": {
+    "item_id": "coal",
+    "image_root": "items/coal.png",
+    "numerical_id": "263",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "318": {
+    "item_id": "flint",
+    "image_root": "items/flint.png",
+    "numerical_id": "318",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "264": {
+    "item_id": "diamond",
+    "image_root": "items/diamond.png",
+    "numerical_id": "264",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "265": {
+    "item_id": "iron_ingot",
+    "image_root": "items/iron_ingot.png",
+    "numerical_id": "265",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "266": {
+    "item_id": "golden_ingot",
+    "image_root": "items/golden_ingot.png",
+    "numerical_id": "266",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "371": {
+    "item_id": "golden_nugget",
+    "image_root": "items/golden_nugget.png",
+    "numerical_id": "371",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "452": {
+    "item_id": "iron_nugget",
+    "image_root": "items/iron_nugget.png",
+    "numerical_id": "452",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "280": {
+    "item_id": "stick",
+    "image_root": "items/stick.png",
+    "numerical_id": "280",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
   "306": {
     "item_id": "iron_helmet",
     "image_root": "armor/iron_helmet.png",
@@ -206,6 +262,196 @@
     "item_id": "iron_leggins",
     "image_root": "armor/iron_leggins.png",
     "numerical_id": "308",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
+  "268": {
+    "item_id": "wooden_sword",
+    "image_root": "tools/wooden_sword.png",
+    "numerical_id": "268",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
+  "269": {
+    "item_id": "wooden_shovel",
+    "image_root": "tools/wooden_shovel.png",
+    "numerical_id": "269",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "dirt"
+  },
+  "270": {
+    "item_id": "wooden_pickaxe",
+    "image_root": "tools/wooden_pickaxe.png",
+    "numerical_id": "270",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "rock"
+  },
+  "271": {
+    "item_id": "wooden_axe",
+    "image_root": "tools/wooden_axe.png",
+    "numerical_id": "271",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "wood"
+  },
+  "290": {
+    "item_id": "wooden_hoe",
+    "image_root": "tools/wooden_hoe.png",
+    "numerical_id": "290",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
+  "275": {
+    "item_id": "stone_axe",
+    "image_root": "tools/stone_axe.png",
+    "numerical_id": "275",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "wood"
+  },
+  "273": {
+    "item_id": "stone_shovel",
+    "image_root": "tools/stone_shovel.png",
+    "numerical_id": "273",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "dirt"
+  },
+  "274": {
+    "item_id": "stone_pickaxe",
+    "image_root": "tools/stone_pickaxe.png",
+    "numerical_id": "274",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "rock"
+  },
+  "272": {
+    "item_id": "stone_sword",
+    "image_root": "tools/stone_sword.png",
+    "numerical_id": "272",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
+  "291": {
+    "item_id": "stone_hoe",
+    "image_root": "tools/stone_hoe.png",
+    "numerical_id": "291",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
+  "258": {
+    "item_id": "iron_axe",
+    "image_root": "tools/iron_axe.png",
+    "numerical_id": "258",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "wood"
+  },
+  "256": {
+    "item_id": "iron_shovel",
+    "image_root": "tools/iron_shovel.png",
+    "numerical_id": "256",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "dirt"
+  },
+  "257": {
+    "item_id": "iron_pickaxe",
+    "image_root": "tools/iron_pickaxe.png",
+    "numerical_id": "257",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "rock"
+  },
+  "267": {
+    "item_id": "iron_sword",
+    "image_root": "tools/iron_sword.png",
+    "numerical_id": "267",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
+  "292": {
+    "item_id": "iron_hoe",
+    "image_root": "tools/iron_hoe.png",
+    "numerical_id": "292",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
+  "286": {
+    "item_id": "golden_axe",
+    "image_root": "tools/golden_axe.png",
+    "numerical_id": "286",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "wood"
+  },
+  "284": {
+    "item_id": "golden_shovel",
+    "image_root": "tools/golden_shovel.png",
+    "numerical_id": "284",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "dirt"
+  },
+  "285": {
+    "item_id": "golden_pickaxe",
+    "image_root": "tools/golden_pickaxe.png",
+    "numerical_id": "285",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "rock"
+  },
+  "283": {
+    "item_id": "golden_sword",
+    "image_root": "tools/golden_sword.png",
+    "numerical_id": "283",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
+  "294": {
+    "item_id": "golden_hoe",
+    "image_root": "tools/golden_hoe.png",
+    "numerical_id": "294",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
+  "279": {
+    "item_id": "diamond_axe",
+    "image_root": "tools/diamond_axe.png",
+    "numerical_id": "279",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "wood"
+  },
+  "277": {
+    "item_id": "diamond_shovel",
+    "image_root": "tools/diamond_shovel.png",
+    "numerical_id": "277",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "dirt"
+  },
+  "278": {
+    "item_id": "diamond_pickaxe",
+    "image_root": "tools/diamond_pickaxe.png",
+    "numerical_id": "278",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "best_for": "rock"
+  },
+  "276": {
+    "item_id": "diamond_sword",
+    "image_root": "tools/diamond_sword.png",
+    "numerical_id": "276",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
+  "293": {
+    "item_id": "diamond_hoe",
+    "image_root": "tools/diamond_hoe.png",
+    "numerical_id": "293",
     "stackable": 0,
     "max_stack_size": 1
   },

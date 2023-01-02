@@ -91,7 +91,7 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
                 block_data = blocks_data[tile]
                 if type(block_data) == dict:
                     if block_data.get('diggable', 0):
-                        breaking_time = calculate_breaking_time(block_data['hardness'], 1)
+                        breaking_time = calculate_breaking_time(block_data, player)
                         now = datetime.datetime.now()
                         if now - hold_start >= datetime.timedelta(seconds=breaking_time):
                             game_map[value_y][value_x] = '0'
@@ -406,11 +406,9 @@ def draw_crafting_table_inventory(screen, inventory, width, height, font, images
     draw_shadows(*(left, top + window_height), *(left + window_width, top + window_height), screen, "black")
 
     text_surface = text_font.render(f"Inventory", False,
-                               tile_color)
+                                    tile_color)
 
     screen.blit(text_surface, (left + 10, top + (42 + 3 * tile_size + 1 * 3) - 12))
-
-
 
     # Slots render
     slot_number = 0
