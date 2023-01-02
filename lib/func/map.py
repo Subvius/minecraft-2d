@@ -133,8 +133,9 @@ def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possib
                         (rect.x - scroll[0], rect.y - scroll[1]))
         else:
             mobs.remove(mob)
+
         close = is_close(rect.x, rect.y, player.rect.x, player.rect.y, mob.trigger_radius)
-        if close:
+        if close and player.game_mode == 'survival':
             mob.set_destination(player.rect.midtop)
         else:
             mob.set_destination(None)
@@ -212,7 +213,7 @@ def draw_health_bar(screen, player: Player, width, height, icons):
 
 
 def draw_shadows(x: int, y: int, x1: int, y1: int, screen: pygame.Surface, color="white"):
-    pygame.draw.line(screen, color, (x, y), (x1, y1))
+    pygame.draw.line(screen, color, (x, y), (x1, y1), width=1)
 
 
 def draw_inventory(screen, inventory, width, height, font, selected_slot, images, blocks_data):
@@ -517,6 +518,204 @@ def draw_crafting_table_inventory(screen, inventory, width, height, font, images
     draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
     draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
     draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
+
+
+def draw_tabs(screen, is_selected_page, x, y, s_color, uns_color, image, on_bottom: bool):
+    pygame.draw.rect(screen, s_color if is_selected_page else uns_color,
+                     pygame.Rect(x + 2, y + 2, 34, 30))
+    if not is_selected_page:
+        draw_shadows(x, y if on_bottom else y + 32, x + 36, y if on_bottom else y + 32, screen, "black")
+    if on_bottom:
+        screen.blit(pygame.transform.scale(image, (22, 22)), (x + 8, y + 6))
+    else:
+        screen.blit(pygame.transform.scale(image, (22, 22)), (x + 8, y + 8))
+
+
+def draw_creative_inventory(screen, inventory, width, height, font, images, blocks_data, player, text_font,
+                            scroll: int, text_field_text: str
+                            ):
+    window_width = (288 - 50) * 1.25
+    window_height = (256 - 30) * 1.25
+    left = width // 2 - window_width // 2
+    top = height // 2 - window_height // 2
+    # Palette
+    tile_color = (160, 160, 160)
+    tile_size = 30
+    block_size = 22
+    background_color = (215, 215, 215)
+    pygame.draw.rect(screen, background_color,
+                     pygame.Rect(left, top, window_width, window_height))
+    page = player.creative_inventory_page
+
+    draw_shadows(*(left, top), *(left + window_width, top), screen)
+    draw_shadows(*(left, top), *(left, top + window_height), screen)
+    # draw_shadows(*(left + window_width, top), *(left + window_width, top + window_height), screen, "black")
+    draw_shadows(*(left, top + window_height), *(left + window_width, top + window_height), screen, "black")
+
+    x = window_width
+    y = -32
+    pygame.draw.rect(screen, background_color, pygame.Rect(left + x, top + y, 36, window_height + 64))
+
+    draw_shadows(x + left, y + top, x + left, top, screen)
+    draw_shadows(x + left, y + top, x + left + 36, top + y, screen)
+    draw_shadows(x + left + 36, y + top, x + left + 36, top + window_height + 32, screen, "black")
+    draw_shadows(x + left, top + window_height + 32, x + left + 36, top + window_height + 32, screen, "black")
+    draw_shadows(x + left, top + window_height, x + left, top + window_height + 32, screen)
+
+    # Tabs
+    tabs = {
+        "search": {
+            "image": "compass",
+            "x": window_width,
+            "y": -32
+        },
+        "inventory": {
+            "image": "bundle",
+            "x": window_width,
+            "y": window_height
+        },
+    }
+    for tab in tabs:
+        value = tabs[tab]
+        draw_tabs(screen, page == tab, value["x"] + left, value["y"] + top, background_color, tile_color,
+                  images[value['image']], value["y"] > 0)
+
+    if page == 'inventory':
+        # Armor render
+        for i in range(4):
+            y = 10 + i * tile_size + 1 * i
+            x = 10
+            pygame.draw.rect(screen, tile_color,
+                             pygame.Rect(left + x, top + y, 28, 28))
+
+            draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
+            draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
+            draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
+            draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
+
+            if inventory[4][i] is not None:
+                block = blocks_data[inventory[4][i]['numerical_id']]
+                screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
+                            (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+
+        # Slots render
+        slot_number = 0
+        for tile_y in range(3):
+            for tile_x in range(9):
+                x = 10 + tile_x * tile_size + 1 * tile_x
+                y = (42 + 3 * tile_size + 1 * 3) + 10 + tile_size * tile_y + 1 * tile_y
+                pygame.draw.rect(screen, tile_color,
+                                 pygame.Rect(left + x, top + y, 28, 28))
+                draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
+                draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
+                draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
+                draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
+
+                if inventory[tile_y + 1][tile_x] is not None:
+                    block = blocks_data[inventory[tile_y + 1][tile_x]['numerical_id']]
+                    screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
+                                (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+
+                    text_surface = font.render(f"{inventory[tile_y + 1][tile_x].get('quantity', 1)}", False,
+                                               "white")
+
+                    screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
+                slot_number += 1
+
+        # Player area render
+        y = 10
+        x = 41
+        pl_width = 28 * 3 + 6
+        pl_height = 28 * 4 + 9
+        pygame.draw.rect(screen, "black",
+                         pygame.Rect(left + x, top + y, pl_width, pl_height))
+        draw_shadows(*(left + x, top + y + pl_height), *(left + x + pl_width, top + y + pl_height), screen)
+        draw_shadows(*(left + x + pl_width, top + y), *(left + x + pl_width, top + y + pl_height), screen)
+        draw_shadows(*(left + x, top + y), *(left + x + pl_width, top + y), screen, "black")
+        draw_shadows(*(left + x, top + y), *(left + x, top + y + pl_height), screen, "black")
+    elif page == "search":
+        blocks_to_show: dict = blocks_data
+        if text_field_text != "":
+            for block in blocks_to_show:
+                if blocks_data[block]['item_id'][0:len(text_field_text)] != text_field_text:
+                    blocks_to_show.pop(block)
+        text_surface = text_font.render(f"Search Items", False,
+                                        tile_color)
+
+        screen.blit(text_surface, (left + 10, top + 13))
+        x = left + 14 + tile_size * 4
+        y = top + 14
+        box_width = tile_size * 5 + 2
+        box_height = 24
+
+        search_rect = pygame.Rect(x, y, box_width, box_height)
+        pygame.draw.rect(screen, tile_color, search_rect)
+        draw_shadows(x, y, x + box_width, y, screen, "black")
+        draw_shadows(x, y, x, y + box_height, screen, "black")
+        draw_shadows(x + box_width, y + box_height, x + box_width, y, screen)
+        draw_shadows(x, y + box_height, x + box_width, y + box_height, screen)
+
+        keys = list(blocks_to_show.keys())
+        for index in range(54):
+            row = index // 9
+            column = index % 9
+            if row - scroll <= 5:
+                x = 10 + column * tile_size + 1 * column
+                y = 52 + tile_size * row + 1 * row
+                pygame.draw.rect(screen, tile_color,
+                                 pygame.Rect(left + x, top + y, 28, 28))
+                draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
+                draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
+                draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
+                draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
+
+                index += scroll * 9
+                if index < len(keys):
+                    block_id = keys[index]
+                    block = blocks_to_show[block_id]
+
+                    screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
+                                (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+
+        x = 19 + 9 * tile_size + 1 * 9
+        y = 52
+        bar_height = tile_size * 7 + 1 * 7 + 6
+        scroll_rect = pygame.Rect(left + x, top + y, 24, bar_height)
+        # Bar area
+        pygame.draw.rect(screen, tile_color, scroll_rect)
+        draw_shadows(*(left + x + 24, top + y), *(left + x + 24, top + y + bar_height), screen)
+        draw_shadows(*(left + x, top + y + bar_height), *(left + x + 24, top + y + bar_height), screen)
+        draw_shadows(*(left + x, top + y), *(left + x, top + y + bar_height), screen, "black")
+        draw_shadows(*(left + x, top + y), *(left + x + 24, top + y), screen, "black")
+        # Scroll point
+        max_scroll = len(list(blocks_to_show.keys())) // 9 + 1
+        point_height = bar_height // max_scroll - 4
+        point_width = 19
+
+        point_rect = pygame.Rect(x + 3 + left, y + 2 + math.ceil(scroll / max_scroll * bar_height) + top, point_width,
+                                 point_height)
+        pygame.draw.rect(screen, background_color, point_rect)
+
+    # Hotbar render
+    for i in range(9):
+        y = ((42 + 3 * tile_size + 1 * 3) + 10 + tile_size * 2 + 1 * 2) + 40
+        x = 10 + i * tile_size + 1 * i
+        pygame.draw.rect(screen, tile_color,
+                         pygame.Rect(left + x, top + y, 28, 28))
+        draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
+        draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
+        draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
+        draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
+
+        if inventory[0][i] is not None:
+            block = blocks_data[inventory[0][i]['numerical_id']]
+            screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
+                        (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+
+            text_surface = font.render(f"{inventory[0][i].get('quantity', 1)}", False,
+                                       "white")
+
+            screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
 
 
 def draw_sun(screen: pygame.Surface, screen_status: lib.models.screen.Screen, icons: dict[str: pygame.Surface]):

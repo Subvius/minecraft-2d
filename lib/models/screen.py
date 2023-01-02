@@ -11,6 +11,8 @@ class Screen:
         self.dimension = "overworld"
         self.mouse_pos = (0, 0)
         self.world_time = 0
+        self.creative_inventory_scroll = 0
+        self.creative_inventory_text_field_text = ""
 
     def change_scene(self, screen: str):
         """Changes screen to another. Can't be same as current"""
@@ -46,6 +48,16 @@ class Screen:
 
     def set_mouse_pos(self, pos):
         self.mouse_pos = pos
+
+    def update_creative_scroll(self, momentum: int, blocks_data:dict):
+        self.creative_inventory_scroll += momentum
+        if self.creative_inventory_scroll < 0:
+            self.creative_inventory_scroll = 0
+        elif self.creative_inventory_scroll > len(list(blocks_data.keys())) // 9:
+            self.creative_inventory_scroll = len(list(blocks_data.keys())) // 9
+
+    def update_creative_text(self, text:str):
+        self.creative_inventory_text_field_text = text
 
     def reset_world_time(self):
         self.world_time = 0

@@ -449,18 +449,23 @@ while True:
 
         draw_inventory(screen, player.inventory, width, height, inventory_font, player.selected_inventory_slot, images,
                        blocks_data)
-        draw_health_bar(screen, player, width, height, icons)
+        if player.game_mode == 'survival':
+            draw_health_bar(screen, player, width, height, icons)
 
         mobs = draw_mobs(screen, player, mobs, possible_x, possible_y, scroll, map_objects, game_map, mob_images)
 
         if screen_status.dimension == "overworld":
             draw_sun(screen, screen_status, icons)
 
-        if screen_status.show_inventory:
+        if screen_status.show_inventory and player.game_mode == 'survival':
             draw_expanded_inventory(screen, player.inventory, width, height, inventory_font,
-                                    images,
-                                    blocks_data, inventory_crafting_slots, craft_result)
-        if screen_status.inventories.get("crafting_table", False):
+                                    images, blocks_data, inventory_crafting_slots, craft_result)
+        elif screen_status.show_inventory and player.game_mode == 'creative':
+            draw_creative_inventory(screen, player.inventory, width, height, inventory_font,
+                                    images, blocks_data, player, main_screen_font,
+                                    screen_status.creative_inventory_scroll,
+                                    screen_status.creative_inventory_text_field_text)
+        elif screen_status.inventories.get("crafting_table", False):
             draw_crafting_table_inventory(screen, player.inventory, width, height, inventory_font,
                                           images,
                                           blocks_data, crafting_table_slots, craft_result, main_screen_font)
@@ -718,7 +723,8 @@ while True:
                 item = None
                 button = event.button
                 if 10 <= mx - left <= 10 + 9 * 30 + 1 * 9 and (42 + 3 * 30 + 1 * 3) + 10 <= my - top <= (
-                        42 + 3 * 30 + 1 * 3) + 10 + 30 * 3 + 1 * 3:
+                        42 + 3 * 30 + 1 * 3) + 10 + 30 * 3 + 1 * 3 and (
+                        player.game_mode == 'survival' or sorted(list(screen_status.inventories.values()))[-1]):
                     size = 30
                     column = int(mx - left + 15) // size
                     row = int((my - top - (
@@ -736,6 +742,9 @@ while True:
                                 "type": item["type"],
                                 "numerical_id": block['numerical_id']
                             }
+                            if player.inventory[row + 1][column - 1].get('best_for', None) is not None:
+                                selected_item.update(
+                                    {"best_for": player.inventory[row + 1][column - 1].get('best_for', None)})
 
                             player.remove_from_inventory(column - 1, item['quantity'], row + 1)
                         elif button == 3 and item['quantity'] // 2 != 0:
@@ -760,6 +769,10 @@ while True:
                                 'numerical_id': selected_item['numerical_id'],
                                 'quantity': selected_item['quantity']
                             }
+                            if selected_item.get('best_for', None) is not None:
+                                player.inventory[row + 1][column - 1].update(
+                                    {"best_for": selected_item.get('best_for', None)})
+
                             selected_item = None
                         elif button == 3:
                             player.inventory[row + 1][column - 1] = {
@@ -791,87 +804,121 @@ while True:
                                                                                    player.inventory[row + 1][column - 1]
                             selected_item['x'] = mx
                             selected_item['y'] = my
+                elif 10 <= mx - left <= 10 + 9 * 30 + 1 * 9 and 52 <= my - top <= 52 + 30 * 6 + 1 * 6 and \
+                        player.game_mode == 'creative' and screen_status.show_inventory and \
+                        player.creative_inventory_page != 'inventory':
+                    size = 30
+                    column = int(mx - left + 15) // size - 1
+                    row = int((my - top - 52) // size)
+                    if player.creative_inventory_page == 'search':
+                        blocks_to_show: dict = blocks_data
+                        text = screen_status.creative_inventory_text_field_text
+                        if text != "":
+                            for block in blocks_to_show:
+                                if blocks_data[block]['item_id'][0:len(text)] != text:
+                                    blocks_to_show.pop(block)
+
+                        index = row * 9 + column + screen_status.creative_inventory_scroll * 9
+                        if index < len(list(blocks_to_show.keys())):
+                            block = blocks_to_show.get(list(blocks_to_show.keys())[index])
+                            selected_item = {
+                                "item_id": block['item_id'],
+                                "numerical_id": block['numerical_id'],
+                                "quantity": 1,
+                                'x': mx,
+                                'y': my,
+                                "type": 'block' if block.get("material", None) is not None else "tool" if block.get(
+                                    "best_for", None) is not None else "item",
+                            }
+                            if block.get("best_for", None) is not None:
+                                selected_item.update({"best_for": block.get("best_for", None)})
+
                 elif 10 <= mx - left <= 10 + 9 * 30 + 1 * 9 and (
                         (42 + 3 * 30 + 1 * 3) + 10 + 30 * 2 + 1 * 2) + 40 <= my - top <= (
                         (42 + 3 * 30 + 1 * 3) + 10 + 30 * 2 + 1 * 2) + 70:
                     size = 30
                     column = int(mx - left + 15) // size
                     row = 0
-                    item = player.inventory[row][column - 1]
+                    try:
+                        item = player.inventory[row][column - 1]
 
-                    if item is not None and selected_item is None:
-                        if button == 1:
-                            block = blocks_data[item["numerical_id"]]
+                        if item is not None and selected_item is None:
+                            if button == 1:
+                                block = blocks_data[item["numerical_id"]]
 
-                            selected_item = {
-                                "x": mx,
-                                "y": my,
-                                "item_id": block['item_id'],
-                                "quantity": item["quantity"],
-                                "type": item["type"],
-                                "numerical_id": block['numerical_id']
-                            }
-                            if player.inventory[row][column - 1].get('best_for', None) is not None:
-                                selected_item.update(
-                                    {"best_for": player.inventory[row][column - 1].get('best_for', None)})
+                                selected_item = {
+                                    "x": mx,
+                                    "y": my,
+                                    "item_id": block['item_id'],
+                                    "quantity": item["quantity"],
+                                    "type": item["type"],
+                                    "numerical_id": block['numerical_id']
+                                }
+                                if player.inventory[row][column - 1].get('best_for', None) is not None:
+                                    selected_item.update(
+                                        {"best_for": player.inventory[row][column - 1].get('best_for', None)})
 
-                            player.remove_from_inventory(column - 1, item['quantity'], row)
-                        elif button == 3 and item['quantity'] // 2 != 0:
-                            block = blocks_data[item["numerical_id"]]
+                                player.remove_from_inventory(column - 1, item['quantity'], row)
+                            elif button == 3 and item['quantity'] // 2 != 0:
+                                block = blocks_data[item["numerical_id"]]
 
-                            selected_item = {
-                                "x": mx,
-                                "y": my,
-                                "item_id": block['item_id'],
-                                "quantity": item["quantity"] // 2,
-                                "type": item["type"],
-                                "numerical_id": block['numerical_id']
-                            }
-                            item['quantity'] -= item['quantity'] // 2
-                            player.inventory[row][column - 1] = item
-                    elif item is None and selected_item is not None:
-                        if button == 1:
-                            player.inventory[row][column - 1] = {
-                                "type": selected_item['type'],
-                                'item_id': selected_item['item_id'],
-                                'numerical_id': selected_item['numerical_id'],
-                                'quantity': selected_item['quantity']
-                            }
-                            if selected_item.get('best_for', None) is not None:
-                                player.inventory[row][column - 1].update(
-                                    {"best_for": selected_item.get('best_for', None)})
-                            selected_item = None
-                        elif button == 3:
-                            player.inventory[row][column - 1] = {
-                                "type": selected_item['type'],
-                                'item_id': selected_item['item_id'],
-                                'numerical_id': selected_item['numerical_id'],
-                                'quantity': 1
-                            }
-
-                            if selected_item['quantity'] - 1 == 0:
+                                selected_item = {
+                                    "x": mx,
+                                    "y": my,
+                                    "item_id": block['item_id'],
+                                    "quantity": item["quantity"] // 2,
+                                    "type": item["type"],
+                                    "numerical_id": block['numerical_id']
+                                }
+                                item['quantity'] -= item['quantity'] // 2
+                                player.inventory[row][column - 1] = item
+                        elif item is None and selected_item is not None:
+                            if button == 1:
+                                player.inventory[row][column - 1] = {
+                                    "type": selected_item['type'],
+                                    'item_id': selected_item['item_id'],
+                                    'numerical_id': selected_item['numerical_id'],
+                                    'quantity': selected_item['quantity']
+                                }
+                                if selected_item.get('best_for', None) is not None:
+                                    player.inventory[row][column - 1].update(
+                                        {"best_for": selected_item.get('best_for', None)})
                                 selected_item = None
-                            else:
-                                selected_item['quantity'] -= 1
-                    elif item is not None and selected_item is not None and button == 1:
-                        if item['item_id'] == selected_item['item_id']:
-                            block = blocks_data[item['numerical_id']]
-                            max_size = block.get("max_stack_size", 1)
-                            if int(item["quantity"]) < max_size:
-                                item['quantity'] += selected_item['quantity']
+                            elif button == 3:
+                                player.inventory[row][column - 1] = {
+                                    "type": selected_item['type'],
+                                    'item_id': selected_item['item_id'],
+                                    'numerical_id': selected_item['numerical_id'],
+                                    'quantity': 1
+                                }
 
-                                if item['quantity'] > max_size:
-                                    selected_item['quantity'] = item['quantity'] - max_size
-                                    item['quantity'] = max_size
-                                    player.inventory[row + 1][column - 1] = item
-                                else:
+                                if selected_item['quantity'] - 1 == 0:
                                     selected_item = None
-                        else:
-                            player.inventory[row + 1][column - 1], selected_item = selected_item, \
-                                                                                   player.inventory[row + 1][column - 1]
-                            selected_item['x'] = mx
-                            selected_item['y'] = my
-                if button == 1:
+                                else:
+                                    selected_item['quantity'] -= 1
+                        elif item is not None and selected_item is not None and button == 1:
+                            if item['item_id'] == selected_item['item_id']:
+                                block = blocks_data[item['numerical_id']]
+                                max_size = block.get("max_stack_size", 1)
+                                if int(item["quantity"]) < max_size:
+                                    item['quantity'] += selected_item['quantity']
+
+                                    if item['quantity'] > max_size:
+                                        selected_item['quantity'] = item['quantity'] - max_size
+                                        item['quantity'] = max_size
+                                        player.inventory[row + 1][column - 1] = item
+                                    else:
+                                        selected_item = None
+                            else:
+                                player.inventory[row + 1][column - 1], selected_item = selected_item, \
+                                                                                       player.inventory[row + 1][
+                                                                                           column - 1]
+                                selected_item['x'] = mx
+                                selected_item['y'] = my
+                    except IndexError:
+                        print('INDEX ERROR')
+                if button == 1 and (
+                        player.game_mode == 'survival' or sorted(list(screen_status.inventories.values()))[-1]):
                     if (10 + 4 * 30 + 1 * 4 + 20) <= mx - left <= (10 + 4 * 30 + 1 * 4 + 20) + 2 * 30 + 1 * 2 and (
                             11 + 32) <= my - top <= (11 + 32) + 30 * 2 + 1 * 2 and screen_status.show_inventory:
                         size = 30
@@ -998,6 +1045,10 @@ while True:
                 not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
             player.set_selected_slot(player.selected_inventory_slot - event.y)
 
+        if event.type == pygame.MOUSEWHEEL and screen_status.screen == "game" and screen_status.show_inventory and \
+                player.game_mode == 'creative':
+            screen_status.update_creative_scroll(-event.y, blocks_data)
+
         if event.type == KEYDOWN and screen_status.screen == 'game':
             if event.key == pygame.K_e:
                 screen_status.toggle_inventory()
@@ -1008,6 +1059,8 @@ while True:
                 and screen_status.screen == 'game':
             if event.key == K_RIGHT or event.key == pygame.K_d:
                 moving_right = True
+            if event.key == pygame.K_c:
+                player.change_game_mode("creative" if player.game_mode == "survival" else "survival")
             if event.key == K_LEFT or event.key == pygame.K_a:
                 moving_left = True
             if event.key == K_UP or event.key == pygame.K_SPACE:

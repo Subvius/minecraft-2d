@@ -7,6 +7,7 @@ class Player:
         self.width: int = 50
         self.image = image
         self.inventory: list = inventory
+        self.creative_inventory_page = "search"
         self.selected_inventory_slot: int = selected_inventory_slot
         self.hp: float = hp
         self.jump_start = None
@@ -21,6 +22,7 @@ class Player:
         self.moving_direction = "right"
         self.is_dead = False
         self.exp = 0
+        self.game_mode = "survival"
 
     def cut_sheet(self, sheet, columns, rows, animation_type):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
@@ -31,6 +33,9 @@ class Player:
                 image = sheet.subsurface(pygame.Rect(
                     frame_location, (self.width, 70)))
                 self.images[animation_type].append(image)
+
+    def change_game_mode(self, game_mode: str = "survival"):
+        self.game_mode = game_mode
 
     def update_image(self):
         self.frame = (self.frame + 1) % len(self.images[self.condition])
