@@ -196,7 +196,8 @@ def draw_health_bar(screen, player: Player, width, height, icons):
     hp = player.hp
 
     for i in range(10):
-        rect = pygame.Rect(width // 2 - 32 * 4.5 + i * (32 * 0.4), height - 58, 32 * 0.4, 32 * 0.4)
+        heart_size = 32 * 0.45
+        rect = pygame.Rect(width // 2 - 32 * 4.5 + i * heart_size, height - 62, heart_size, heart_size)
         icon = icons["heart"]
         heart = i + 1
 
@@ -209,7 +210,7 @@ def draw_health_bar(screen, player: Player, width, height, icons):
             elif heart * 2 - 1 > int(hp):
                 icon = icons['empty_heart']
 
-        screen.blit(pygame.transform.scale(icon, (32 * 0.4, 32 * 0.4)), (rect.x, rect.y))
+        screen.blit(pygame.transform.scale(icon, (heart_size, heart_size)), (rect.x, rect.y))
 
 
 def draw_shadows(x: int, y: int, x1: int, y1: int, screen: pygame.Surface, color="white"):
@@ -518,6 +519,47 @@ def draw_crafting_table_inventory(screen, inventory, width, height, font, images
     draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
     draw_shadows(*(left + x, top + y), *(left + x, top + y + 28), screen, "black")
     draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
+
+
+def draw_handholding_item(screen: pygame.Surface, images: dict, player: Player, scroll: list[int], screen_status):
+    item = player.inventory[0][player.selected_inventory_slot]
+    image = images[item['item_id']]
+    mx = screen_status.mouse_pos[0]
+    my = screen_status.mouse_pos[1]
+    x = player.rect.x - scroll[0]
+    x += 15 if player.moving_direction == 'right' else -12
+    y = player.rect.y - scroll[1] + 32
+
+    angle = player.get_angle_for_display(mx, my, scroll)
+
+    screen.blit(pygame.transform.rotate(pygame.transform.scale(image, (24, 24)).convert_alpha(), angle), (x, y))
+
+
+def cut_progress_bar(image: pygame.Surface, percent: float) -> pygame.Surface:
+    width = image.get_width()
+    height = image.get_height()
+    surf = pygame.Surface((int(width * percent), height))
+    surf.blit(image, (0, 0))
+    surf.set_colorkey((0, 0, 0))
+    return surf
+
+
+def draw_exp_bar(screen, player, icons):
+    empty_bar_image: pygame.Surface = icons['empty_exp_bar']
+    full_bar_image: pygame.Surface = icons['full_exp_bar']
+
+    width, height = screen.get_width(), screen.get_height()
+    level: float = player.get_level_from_exp()
+    percent = round(float("0." + str(level).split(".")[1]), 3)
+    x = width // 2 - 32 * 4.5
+    y = height - 45
+    screen.blit(
+        pygame.transform.scale(empty_bar_image, (32 * 9, empty_bar_image.get_height() + 5)),
+        (x, y))
+    screen.blit(
+        pygame.transform.scale(cut_progress_bar(full_bar_image, percent),
+                               (32 * 9 * percent, empty_bar_image.get_height() + 5)),
+        (x, y))
 
 
 def draw_tabs(screen, is_selected_page, x, y, s_color, uns_color, image, on_bottom: bool):

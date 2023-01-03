@@ -19,7 +19,7 @@ def load_images(blocks_data: dict):
             images.update({file.split(".")[0]: pygame.image.load(f"lib/assets/items/{file}")})
 
     for file in os.listdir("lib/assets/icons"):
-        if file.endswith(".webp"):
+        if file.endswith(".webp") or file.endswith(".png"):
             icons.update({f"{file.split('.')[0]}": pygame.image.load(f"lib/assets/icons/{file}")})
 
     icons.update({"sun": pygame.image.load("lib/assets/sun.png")})

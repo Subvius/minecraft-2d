@@ -3,3 +3,4 @@ venv/
 alg.py
 .idea/
 **/.DS_Store
+lib/storage/objects/

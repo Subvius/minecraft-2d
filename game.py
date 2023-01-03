@@ -11,10 +11,11 @@ from pygame.locals import *
 
 from lib.func.load_images import load_images
 from lib.func.map import *
-from lib.models.player import *
+from lib.models.player import Player
 from lib.models.screen import *
 from lib.models.buttons import *
 from lib.models.cave_monster import *
+from lib.models.sound import Sound
 from lib.func.crafts import *
 
 clock = pygame.time.Clock()
@@ -73,6 +74,11 @@ with open('./lib/func/blocks.json') as f:
     blocks_data = json.load(f)
 
 images, icons, mob_images = load_images(blocks_data)
+
+sounds = Sound()
+sounds.load_all()
+sounds.play_music("minecraft_music", -1)
+
 screen_status = Screen()
 
 falling_items = []
@@ -134,6 +140,9 @@ levitating_blocks_animation = 8
 blocks_animation_reverse = False
 last_heal = pygame.time.get_ticks()
 HEAL_DELAY = 1500
+WALK_SOUND_DELAY = 500
+walk_sound = 1
+last_walk_sound_play = pygame.time.get_ticks()
 
 mobs = list()
 
@@ -321,6 +330,25 @@ while True:
         player_rect.height = 64
         player.rect = player_rect
 
+        if player.condition == 'run' and collisions['bottom']:
+            numerical_id = game_map[player.rect.y // 32 + 2][player.rect.x // 32]
+            if numerical_id.count("{") == 0 and numerical_id != '0':
+                if numerical_id.count("-") > 0:
+                    numerical_id = numerical_id.split("-")[0]
+                block = blocks_data[numerical_id]
+                if block['material'] in ["wood", "rock", "dirt"]:
+                    sound_name = block['item_id']
+                    if sound_name in ['grass_block', "dirt"]:
+                        sound_name = 'grass'
+                    sound_name += walk_sound.__str__()
+                    current_time = pygame.time.get_ticks()
+                    if current_time - last_walk_sound_play > WALK_SOUND_DELAY:
+                        sounds.play_sound(sound_name)
+                        last_walk_sound_play = current_time
+                        walk_sound += 1
+                        if walk_sound > 4:
+                            walk_sound = 1
+
         can_pick_up = player.can_pick_up(game_map)
         if can_pick_up[0]:
             blocks: dict = json.loads(can_pick_up[1])
@@ -386,7 +414,7 @@ while True:
 
         # Рисуем предмет, который находиться в руке игрока
         if player.inventory[0][player.selected_inventory_slot] is not None:
-            pass
+            draw_handholding_item(display, images, player, scroll, screen_status)
 
         if holding_left_button:
             map_objects, game_map, hold_start, falling_items = on_left_click(hold_pos, player.rect, map_objects, scroll,
@@ -451,6 +479,7 @@ while True:
                        blocks_data)
         if player.game_mode == 'survival':
             draw_health_bar(screen, player, width, height, icons)
+            draw_exp_bar(screen, player, icons)
 
         mobs = draw_mobs(screen, player, mobs, possible_x, possible_y, scroll, map_objects, game_map, mob_images)
 
@@ -819,12 +848,13 @@ while True:
                                     blocks_to_show.pop(block)
 
                         index = row * 9 + column + screen_status.creative_inventory_scroll * 9
-                        if index < len(list(blocks_to_show.keys())):
+                        if index < len(list(blocks_to_show.keys())) and selected_item is None:
+                            keys = pygame.key.get_pressed()
                             block = blocks_to_show.get(list(blocks_to_show.keys())[index])
                             selected_item = {
                                 "item_id": block['item_id'],
                                 "numerical_id": block['numerical_id'],
-                                "quantity": 1,
+                                "quantity": block["max_stack_size"] if keys[pygame.K_LSHIFT] else 1,
                                 'x': mx,
                                 'y': my,
                                 "type": 'block' if block.get("material", None) is not None else "tool" if block.get(
@@ -832,6 +862,8 @@ while True:
                             }
                             if block.get("best_for", None) is not None:
                                 selected_item.update({"best_for": block.get("best_for", None)})
+                        elif selected_item is not None:
+                            selected_item = None
 
                 elif 10 <= mx - left <= 10 + 9 * 30 + 1 * 9 and (
                         (42 + 3 * 30 + 1 * 3) + 10 + 30 * 2 + 1 * 2) + 40 <= my - top <= (
@@ -910,9 +942,9 @@ while True:
                                     else:
                                         selected_item = None
                             else:
-                                player.inventory[row + 1][column - 1], selected_item = selected_item, \
-                                                                                       player.inventory[row + 1][
-                                                                                           column - 1]
+                                player.inventory[row][column - 1], selected_item = selected_item, \
+                                                                                   player.inventory[row][
+                                                                                       column - 1]
                                 selected_item['x'] = mx
                                 selected_item['y'] = my
                     except IndexError:
