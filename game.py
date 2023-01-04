@@ -13,9 +13,10 @@ from lib.func.load_images import load_images
 from lib.func.map import *
 from lib.models.player import Player
 from lib.models.screen import *
-from lib.models.buttons import *
+from lib.models.buttons import Button, set_controls_buttons
 from lib.models.cave_monster import *
 from lib.models.sound import Sound
+from lib.models.settings import Settings
 from lib.func.crafts import *
 
 clock = pygame.time.Clock()
@@ -65,6 +66,8 @@ with open('lib/storage/recipes.json', "r") as f:
     recipes = json.load(f)
     f.close()
 
+settings = Settings("lib/storage/settings.json")
+
 vertical_momentum = 0
 air_timer = 0
 
@@ -77,7 +80,8 @@ images, icons, mob_images = load_images(blocks_data)
 
 sounds = Sound()
 sounds.load_all()
-sounds.play_music("minecraft_music", -1)
+if settings.play_music:
+    sounds.play_music("minecraft_music", -1)
 
 screen_status = Screen()
 
@@ -134,6 +138,40 @@ create_world_buttons = [
 
 ]
 
+game_menu_buttons = [
+    Button(label="Back to Game", width=200, height=25, background_color="gray", text_color="white",
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 - 15, hover_color="lightgray", id=0),
+    Button(label="Options", width=95, height=25, background_color="gray", text_color="white",
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", id=1),
+    Button(label="Statistics", width=95, height=25, background_color="gray", text_color="white",
+           x=WINDOW_SIZE[0] // 2 - 100 + 105, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", id=2),
+    Button(label="Save and Quit to Title", width=200, height=25, background_color="gray", text_color="white",
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 45, hover_color="lightgray", id=3),
+
+]
+options_buttons = [
+    Button(label="Music & Sounds...", width=200, height=25, background_color="gray", text_color="white",
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 - 15, hover_color="lightgray", id=0),
+    Button(label="Controls...", width=200, height=25, background_color="gray", text_color="white",
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", id=1),
+    Button(label="Done", width=200, height=25, background_color="gray", text_color="white",
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 45, hover_color="lightgray", id=2),
+]
+
+music_and_sounds_buttons = [
+    Button(label=f"Music: {'On' if settings.play_music else 'Off'}", width=200, height=25, background_color="gray",
+           text_color="white",
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 - 15, hover_color="lightgray", id=0),
+    Button(label=f"Blocks: {'On' if settings.blocks_sound else 'Off'}", width=200, height=25, background_color="gray",
+           text_color="white",
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", id=1),
+    Button(label="Done", width=200, height=25, background_color="gray", text_color="white",
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 45, hover_color="lightgray", id=2),
+]
+
+controls_buttons = set_controls_buttons(settings, WINDOW_SIZE)
+controls_select_key = [False, 0]
+
 animation_duration = 200
 last_update = pygame.time.get_ticks()
 levitating_blocks_animation = 8
@@ -154,17 +192,19 @@ while True:
         elif screen_status.dimension == 'nether':
             display.fill((88, 30, 65))
 
-        screen_status.update_world_time()
-
-        # update player image
         current_time = pygame.time.get_ticks()
         if current_time - last_update >= animation_duration:
             player.update_image()
             last_update = current_time
 
-        if current_time - last_heal >= HEAL_DELAY:
-            player.heal()
-            last_heal = current_time
+        if not screen_status.paused:
+            screen_status.update_world_time()
+
+            # update player image
+
+            if current_time - last_heal >= HEAL_DELAY:
+                player.heal()
+                last_heal = current_time
 
         if player.frame == 3 and player.condition == 'throw':
             player.change_condition('idle')
@@ -239,7 +279,7 @@ while True:
                 x += 1
             y += 1
 
-        if random.randint(0, 1000) == 5 and screen_status.world_time > 36_000:
+        if random.randint(0, 1000) == 5 and screen_status.world_time > 36_000 and not screen_status.paused:
             position = [random.choice(possible_x) * 32, random.choice(possible_y) * 32]
             # position = [player.rect.x, player.rect.y]
 
@@ -330,7 +370,7 @@ while True:
         player_rect.height = 64
         player.rect = player_rect
 
-        if player.condition == 'run' and collisions['bottom']:
+        if player.condition == 'run' and collisions['bottom'] and settings.blocks_sound:
             numerical_id = game_map[player.rect.y // 32 + 2][player.rect.x // 32]
             if numerical_id.count("{") == 0 and numerical_id != '0':
                 if numerical_id.count("-") > 0:
@@ -413,10 +453,10 @@ while True:
         # player.draw(display, player_rect.x - scroll[0], player_rect.y - scroll[1])
 
         # Рисуем предмет, который находиться в руке игрока
-        if player.inventory[0][player.selected_inventory_slot] is not None:
+        if player.inventory[0][player.selected_inventory_slot] is not None and not screen_status.paused:
             draw_handholding_item(display, images, player, scroll, screen_status)
 
-        if holding_left_button:
+        if holding_left_button and not screen_status.paused:
             map_objects, game_map, hold_start, falling_items = on_left_click(hold_pos, player.rect, map_objects, scroll,
                                                                              game_map,
                                                                              player,
@@ -481,14 +521,15 @@ while True:
             draw_health_bar(screen, player, width, height, icons)
             draw_exp_bar(screen, player, icons)
 
-        mobs = draw_mobs(screen, player, mobs, possible_x, possible_y, scroll, map_objects, game_map, mob_images)
+        mobs = draw_mobs(screen, player, mobs, possible_x, possible_y, scroll, map_objects, game_map, mob_images,
+                         screen_status.paused)
 
         if screen_status.dimension == "overworld":
             draw_sun(screen, screen_status, icons)
 
         if screen_status.show_inventory and player.game_mode == 'survival':
             draw_expanded_inventory(screen, player.inventory, width, height, inventory_font,
-                                    images, blocks_data, inventory_crafting_slots, craft_result)
+                                    images, blocks_data, inventory_crafting_slots, craft_result, player)
         elif screen_status.show_inventory and player.game_mode == 'creative':
             draw_creative_inventory(screen, player.inventory, width, height, inventory_font,
                                     images, blocks_data, player, main_screen_font,
@@ -499,13 +540,51 @@ while True:
                                           images,
                                           blocks_data, crafting_table_slots, craft_result, main_screen_font)
 
-        if selected_item is not None:
+        if selected_item is not None and (
+                screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]):
             screen.blit(pygame.transform.scale(images[selected_item['item_id']], (24, 24)),
                         (selected_item["x"], selected_item["y"]))
             text_surface = inventory_font.render(f"{selected_item['quantity']}", False,
                                                  "white")
 
             screen.blit(text_surface, (selected_item['x'] + 10, selected_item['y'] + 10))
+
+        if screen_status.paused and (
+                not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
+            draw_rect_alpha(screen, (0, 0, 0, 127,), (0, 0, WINDOW_SIZE[0], WINDOW_SIZE[1]))
+
+            for button in game_menu_buttons:
+                button.render(screen, main_screen_font)
+    elif screen_status.screen == 'settings':
+        pygame.display.set_caption("Minecraft 2D - Options")
+        screen.blit(images['world_select_bg'], (0, 0))
+
+        for button in options_buttons:
+            button.render(screen, main_screen_font)
+    elif screen_status.screen == 'music_options':
+        pygame.display.set_caption("Minecraft 2D - Music & Sounds Options")
+        screen.blit(images['world_select_bg'], (0, 0))
+
+        for button in music_and_sounds_buttons:
+            button.render(screen, main_screen_font)
+    elif screen_status.screen == 'controls':
+        pygame.display.set_caption("Minecraft 2D - Controls Options")
+        screen.blit(images['world_select_bg'], (0, 0))
+
+        for button in controls_buttons:
+            button.render(screen, main_screen_font)
+
+        keys = list(settings.convert_to_dict().keys())
+        for index in range(len(keys)):
+            element = keys[index]
+            element = element.split("_")
+            for i in range(len(element)):
+                word = element[i].capitalize()
+                element[i] = word
+
+            y = 30 * index
+            title = main_screen_font.render(" ".join(element), False, "white")
+            screen.blit(title, (WINDOW_SIZE[0] // 2 + 75 - 250, 100 - 15 + y))
 
     elif screen_status.screen == 'main':
         pygame.display.set_caption("Minecraft 2D")
@@ -594,7 +673,9 @@ while True:
                 if len(text_field_text) < 22:
                     text_field_text += event.unicode
 
-        if event.type == pygame.MOUSEMOTION and screen_status.screen in ['main', 'world_select', 'create_world']:
+        if event.type == pygame.MOUSEMOTION and screen_status.screen in ['main', 'world_select', 'create_world',
+                                                                         "game", 'settings', 'music_options',
+                                                                         'controls']:
             if screen_status.screen == 'main':
                 for button in main_screen_buttons:
                     button.on_mouse_motion(*event.pos)
@@ -603,6 +684,20 @@ while True:
                     button.on_mouse_motion(*event.pos)
             elif screen_status.screen == 'create_world':
                 for button in create_world_buttons:
+                    button.on_mouse_motion(*event.pos)
+            elif screen_status.screen == 'settings':
+                for button in options_buttons:
+                    button.on_mouse_motion(*event.pos)
+            elif screen_status.screen == 'music_options':
+                for button in music_and_sounds_buttons:
+                    button.on_mouse_motion(*event.pos)
+            elif screen_status.screen == 'controls':
+                for button in controls_buttons:
+                    button.on_mouse_motion(*event.pos)
+
+            elif screen_status.screen == 'game' and screen_status.paused and (
+                    not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
+                for button in game_menu_buttons:
                     button.on_mouse_motion(*event.pos)
 
         if event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'main':
@@ -615,7 +710,7 @@ while True:
             if btn is not None:
                 if btn.id == 0:
                     screen_status.change_scene('world_select')
-                if btn.id == 2:
+                elif btn.id == 2:
                     pygame.quit()
                     sys.exit()
 
@@ -629,7 +724,7 @@ while True:
             if btn is not None:
                 if btn.id == 0:
                     screen_status.change_scene('main')
-                if btn.id == 1:
+                elif btn.id == 1:
                     screen_status.change_scene('create_world')
                     text_field_text = "New world"
             rect = pygame.Rect(*event.pos, 1, 1)
@@ -639,6 +734,7 @@ while True:
                     screen_status.set_world(world)
                     screen_status.change_scene('game')
                     screen_status.toggle_pause()
+                    holding_left_button = False
                     with open("lib/storage/worlds_data.json", "r") as f:
                         data_json = json.load(f)
                     data = data_json[str(world[1])]
@@ -674,7 +770,7 @@ while True:
                 if btn.id == 0:
                     screen_status.change_scene('world_select')
                     text_field_text = ""
-                if btn.id == 1:
+                elif btn.id == 1:
                     now = datetime.datetime.now()
                     seed = random.randint(1, 400)
                     cursor.execute(
@@ -704,6 +800,7 @@ while True:
                     screen_status.set_world(world)
                     screen_status.change_scene('game')
                     screen_status.toggle_pause()
+                    holding_left_button = False
                     game_map = data_json
                     player.rect.x = 1000 * 32 // 2
                     player.rect.y = 60 * 32
@@ -714,23 +811,122 @@ while True:
                 text_field_focused = True
             else:
                 text_field_focused = False
+        elif event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'game' and screen_status.paused and (
+                not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
+            btn = None
+            for button in game_menu_buttons:
+                res = button.on_mouse_click(*event.pos)
+                if res:
+                    btn = button
+                    break
+            if btn is not None:
+                if btn.id == 0:
+                    screen_status.toggle_pause()
+                    holding_left_button = False
+                elif btn.id == 1:
+                    screen_status.change_scene("settings")
+                elif btn.id == 2:
+                    screen_status.change_scene("statistics")
+                elif btn.id == 3:
+                    # TODO SAVE FUNCTION CALL
+                    screen_status.change_scene("world_select")
+        elif event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'settings':
+            btn = None
+            for button in options_buttons:
+                res = button.on_mouse_click(*event.pos)
+                if res:
+                    btn = button
+                    break
+            if btn is not None:
+                if btn.id == 0:
+                    screen_status.change_scene('music_options')
+                elif btn.id == 1:
+                    screen_status.change_scene('controls')
+                elif btn.id == 2:
+                    screen_status.change_scene('game')
+        elif event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'music_options':
+            btn = None
+            for button in music_and_sounds_buttons:
+                res = button.on_mouse_click(*event.pos)
+                if res:
+                    btn = button
+                    break
+            if btn is not None:
+                if btn.id == 0:
+                    new_value = not settings.play_music
+                    music_and_sounds_buttons[0].label = f"Music: {'On' if new_value else 'Off'}"
+                    settings.update_setting("music", new_value)
+                    if new_value:
+                        sounds.play_music("minecraft_music", -1)
+                    else:
+                        sounds.stop_music("minecraft_music", 200)
+                elif btn.id == 1:
+                    new_value = not settings.blocks_sound
+                    music_and_sounds_buttons[1].label = f"Blocks: {'On' if new_value else 'Off'}"
+                    settings.update_setting("blocks", new_value)
+                elif btn.id == 2:
+                    screen_status.change_scene('settings')
+
+        elif (event.type == pygame.MOUSEBUTTONDOWN or (
+                event.type == pygame.KEYDOWN and controls_select_key[0])) and screen_status.screen == 'controls':
+            if controls_select_key[0]:
+                keys = list(settings.default.keys())
+                key = keys[controls_select_key[1]]
+                new_value = None
+                if event.type == pygame.KEYDOWN:
+                    char = event.unicode
+                    name = pygame.key.name(event.key)
+                    if name.count("alt") or name.count("ctrl") or name.count("shift"):
+                        pass
+                    else:
+                        if name in ["space", "return"]:
+                            new_value = f"K_{name.upper()}"
+                        else:
+                            if char != "":
+                                new_value = "K_" + char
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    new_value = event.button
+                if new_value is not None:
+                    settings.update_setting(key, new_value)
+                    controls_buttons = set_controls_buttons(settings, WINDOW_SIZE)
+
+                    controls_select_key = [False, 0]
+
+            else:
+                btn = None
+                for button in controls_buttons:
+                    res = button.on_mouse_click(*event.pos)
+                    if res:
+                        btn = button
+                        break
+                if btn is not None:
+                    if btn.id not in [9, 10]:
+                        controls_select_key = [True, btn.id]
+                        btn.toggle_high_light()
+                    elif btn.id == 9:
+                        screen_status.change_scene('settings')
+                    elif btn.id == 10:
+                        keys = list(settings.default.keys())
+                        for key in keys:
+                            settings.update_setting(key, settings.default.get(key))
+                        controls_buttons = set_controls_buttons(settings, WINDOW_SIZE)
 
         if event.type == pygame.MOUSEMOTION and not screen_status.paused \
                 and screen_status.screen == 'game':
             coord = event.pos
             screen_status.set_mouse_pos(coord)
 
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3 and not screen_status.paused \
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == settings.use_item and not screen_status.paused \
                 and screen_status.screen == 'game' and (
                 not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
             map_objects, game_map = on_right_click(event, player.rect, map_objects, scroll, game_map, player,
                                                    screen_status)
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not screen_status.paused \
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == settings.attack and not screen_status.paused \
                 and screen_status.screen == 'game':
             holding_left_button = True
             hold_start = datetime.datetime.now()
             hold_pos = event.pos
-        if event.type == pygame.MOUSEBUTTONUP and event.button == 1 and not screen_status.paused \
+        if event.type == pygame.MOUSEBUTTONUP and event.button == settings.attack and not screen_status.paused \
                 and screen_status.screen == 'game':
             holding_left_button = False
             hold_end = datetime.datetime.now()
@@ -1082,20 +1278,29 @@ while True:
             screen_status.update_creative_scroll(-event.y, blocks_data)
 
         if event.type == KEYDOWN and screen_status.screen == 'game':
-            if event.key == pygame.K_e:
+            if event.key == eval(f"pygame.{settings.inventory}"):
                 screen_status.toggle_inventory()
-                screen_status.toggle_pause()
                 moving_left = moving_right = False
                 craft_result = None
+            elif event.key == pygame.K_ESCAPE:
+                if not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]:
+                    screen_status.toggle_pause()
+                    holding_left_button = False
+                    moving_left = moving_right = False
+                    craft_result = None
+                else:
+                    screen_status.toggle_inventory()
+                    moving_left = moving_right = False
+                    craft_result = None
         if event.type == KEYDOWN and not screen_status.paused \
                 and screen_status.screen == 'game':
-            if event.key == K_RIGHT or event.key == pygame.K_d:
+            if event.key == K_RIGHT or event.key == eval(f"pygame.{settings.move_right}"):
                 moving_right = True
-            if event.key == pygame.K_c:
+            if event.key == eval(f"pygame.{settings.toggle_creative_mode}"):
                 player.change_game_mode("creative" if player.game_mode == "survival" else "survival")
-            if event.key == K_LEFT or event.key == pygame.K_a:
+            if event.key == K_LEFT or event.key == eval(f"pygame.{settings.move_left}"):
                 moving_left = True
-            if event.key == K_UP or event.key == pygame.K_SPACE:
+            if event.key == K_UP or event.key == eval(f"pygame.{settings.jump}"):
                 if air_timer < 6:
                     vertical_momentum = -8
                     player.jump_start = (player.rect.x // 32, player.rect.y // 32)
@@ -1104,11 +1309,11 @@ while True:
                              pygame.K_8, pygame.K_9, ]:
                 player.set_selected_slot(int(event.key) - 49)
 
-            if event.key == pygame.K_f and can_light_portal[0]:
+            if event.key == eval(f"pygame.{settings.portal_interact}") and can_light_portal[0]:
                 for block in can_light_portal[1]:
                     game_map[block[0]][block[1]] = "90"
 
-            if event.key == pygame.K_f and close_to_portal and not can_light_portal[0] \
+            if event.key == eval(f"pygame.{settings.portal_interact}") and close_to_portal and not can_light_portal[0] \
                     and screen_status.dimension == 'overworld':
                 seed: int = screen_status.world[1]
 
@@ -1156,7 +1361,7 @@ while True:
                     player.rect.x = data["player_coord"][0]
                     player.rect.y = data["player_coord"][1]
 
-            elif event.key == pygame.K_f and close_to_portal and not can_light_portal[0] \
+            elif event.key == eval(f"pygame.{settings.portal_interact}") and close_to_portal and not can_light_portal[0] \
                     and screen_status.dimension == 'nether':
                 seed: int = screen_status.world[1]
 
@@ -1176,7 +1381,7 @@ while True:
                 player.rect.x = data["player_coord"][0]
                 player.rect.y = data["player_coord"][1]
 
-            if event.key == pygame.K_q:
+            if event.key == eval(f"pygame.{settings.drop}"):
                 if player.inventory[0][player.selected_inventory_slot] is not None:
                     direction = player.moving_direction
                     x, y = player.rect.x, player.rect.y
@@ -1195,9 +1400,9 @@ while True:
 
         if event.type == KEYUP and not screen_status.paused \
                 and screen_status.screen == 'game':
-            if event.key == K_RIGHT or event.key == pygame.K_d:
+            if event.key == K_RIGHT or event.key == eval(f"pygame.{settings.move_right}"):
                 moving_right = False
-            if event.key == K_LEFT or event.key == pygame.K_a:
+            if event.key == K_LEFT or event.key == eval(f"pygame.{settings.move_left}"):
                 moving_left = False
 
     pygame.display.update()

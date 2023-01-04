@@ -101,6 +101,11 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
                             num_id = tile
                             x += scroll[0]
                             y += scroll[1]
+                            x //= 32
+                            x *= 32
+                            x += 8
+                            y //= 32
+                            y *= 32
                             falling_items.append({
                                 "direction": "down",
                                 "x": x,
@@ -120,7 +125,7 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
 
 
 def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possible_x: list[int], possible_y: list[int],
-              scroll: list[int], map_objects: list[pygame.Rect], game_map: list, images):
+              scroll: list[int], map_objects: list[pygame.Rect], game_map: list, images, paused: bool):
     for mob in mobs:
         rect = mob.rect
         if rect.x // 32 in possible_x and rect.y // 32 in possible_y:
@@ -135,7 +140,7 @@ def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possib
             mobs.remove(mob)
 
         close = is_close(rect.x, rect.y, player.rect.x, player.rect.y, mob.trigger_radius)
-        if close and player.game_mode == 'survival':
+        if close and player.game_mode == 'survival' and not paused:
             mob.set_destination(player.rect.midtop)
         else:
             mob.set_destination(None)
@@ -229,15 +234,16 @@ def draw_inventory(screen, inventory, width, height, font, selected_slot, images
         if inventory[0][i]:
             block = blocks_data[inventory[0][i]['numerical_id']]
             screen.blit(pygame.transform.scale(images[block["item_id"]], (16, 16)), (rect.x + 8, rect.y + 8))
+            count = inventory[0][i]['quantity']
+            if count > 1:
+                text_surface = font.render(f"{inventory[0][i]['quantity']}", False,
+                                           selected_color if i == selected_slot else color)
 
-            text_surface = font.render(f"{inventory[0][i]['quantity']}", False,
-                                       selected_color if i == selected_slot else color)
-
-            screen.blit(text_surface, (rect.x + 16, rect.y + 16))
+                screen.blit(text_surface, (rect.x + 16, rect.y + 16))
 
 
 def draw_expanded_inventory(screen, inventory, width, height, font, images, blocks_data,
-                            inventory_crafting_slots: list, craft_result: dict):
+                            inventory_crafting_slots: list, craft_result: dict, player: Player):
     window_width = (288 - 50) * 1.25
     window_height = (256 - 30) * 1.25
     left = width // 2 - window_width // 2
@@ -289,11 +295,12 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
                 block = blocks_data[inventory[tile_y + 1][tile_x]['numerical_id']]
                 screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
                             (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+                count = inventory[tile_y + 1][tile_x].get('quantity', 1)
+                if count > 1:
+                    text_surface = font.render(f"{inventory[tile_y + 1][tile_x].get('quantity', 1)}", False,
+                                               "white")
 
-                text_surface = font.render(f"{inventory[tile_y + 1][tile_x].get('quantity', 1)}", False,
-                                           "white")
-
-                screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
+                    screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
             slot_number += 1
 
     # Hotbar render
@@ -311,19 +318,23 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
             block = blocks_data[inventory[0][i]['numerical_id']]
             screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
                         (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+            count = inventory[0][i].get('quantity', 1)
+            if count > 1:
+                text_surface = font.render(f"{inventory[0][i].get('quantity', 1)}", False,
+                                           "white")
 
-            text_surface = font.render(f"{inventory[0][i].get('quantity', 1)}", False,
-                                       "white")
-
-            screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
+                screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
 
     # Player area render
     y = 10
     x = 41
     pl_width = 28 * 3 + 6
     pl_height = 28 * 4 + 9
+
     pygame.draw.rect(screen, "black",
                      pygame.Rect(left + x, top + y, pl_width, pl_height))
+    screen.blit(pygame.transform.scale(player.image, (36, 72)), (left + x + pl_width * 0.35, top + y + pl_height - 72))
+
     draw_shadows(*(left + x, top + y + pl_height), *(left + x + pl_width, top + y + pl_height), screen)
     draw_shadows(*(left + x + pl_width, top + y), *(left + x + pl_width, top + y + pl_height), screen)
     draw_shadows(*(left + x, top + y), *(left + x + pl_width, top + y), screen, "black")
@@ -429,11 +440,12 @@ def draw_crafting_table_inventory(screen, inventory, width, height, font, images
                 block = blocks_data[inventory[tile_y + 1][tile_x]['numerical_id']]
                 screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
                             (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+                count = inventory[tile_y + 1][tile_x].get('quantity', 1)
+                if count > 1:
+                    text_surface = font.render(f"{inventory[tile_y + 1][tile_x].get('quantity', 1)}", False,
+                                               "white")
 
-                text_surface = font.render(f"{inventory[tile_y + 1][tile_x].get('quantity', 1)}", False,
-                                           "white")
-
-                screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
+                    screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
             slot_number += 1
 
     # Hotbar render
@@ -451,11 +463,12 @@ def draw_crafting_table_inventory(screen, inventory, width, height, font, images
             block = blocks_data[inventory[0][i]['numerical_id']]
             screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
                         (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+            count = inventory[0][i].get('quantity', 1)
+            if count > 1:
+                text_surface = font.render(f"{inventory[0][i].get('quantity', 1)}", False,
+                                           "white")
 
-            text_surface = font.render(f"{inventory[0][i].get('quantity', 1)}", False,
-                                       "white")
-
-            screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
+                screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
 
     text_surface = text_font.render(f"Crafting", False,
                                     tile_color)
@@ -533,6 +546,12 @@ def draw_handholding_item(screen: pygame.Surface, images: dict, player: Player, 
     angle = player.get_angle_for_display(mx, my, scroll)
 
     screen.blit(pygame.transform.rotate(pygame.transform.scale(image, (24, 24)).convert_alpha(), angle), (x, y))
+
+
+def draw_rect_alpha(surface, color, rect):
+    shape_surf = pygame.Surface(pygame.Rect(rect).size, pygame.SRCALPHA)
+    pygame.draw.rect(shape_surf, color, shape_surf.get_rect())
+    surface.blit(shape_surf, rect)
 
 
 def cut_progress_bar(image: pygame.Surface, percent: float) -> pygame.Surface:
@@ -657,11 +676,12 @@ def draw_creative_inventory(screen, inventory, width, height, font, images, bloc
                     block = blocks_data[inventory[tile_y + 1][tile_x]['numerical_id']]
                     screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
                                 (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+                    count = inventory[tile_y + 1][tile_x].get('quantity', 1)
+                    if count > 1:
+                        text_surface = font.render(f"{inventory[tile_y + 1][tile_x].get('quantity', 1)}", False,
+                                                   "white")
 
-                    text_surface = font.render(f"{inventory[tile_y + 1][tile_x].get('quantity', 1)}", False,
-                                               "white")
-
-                    screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
+                        screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
                 slot_number += 1
 
         # Player area render
@@ -753,11 +773,12 @@ def draw_creative_inventory(screen, inventory, width, height, font, images, bloc
             block = blocks_data[inventory[0][i]['numerical_id']]
             screen.blit(pygame.transform.scale(images[block["item_id"]], (block_size, block_size)),
                         (left + x + (tile_size - block_size) // 2, top + y + (tile_size - block_size) // 2))
+            count = inventory[0][i].get('quantity', 1)
+            if count > 1:
+                text_surface = font.render(f"{inventory[0][i].get('quantity', 1)}", False,
+                                           "white")
 
-            text_surface = font.render(f"{inventory[0][i].get('quantity', 1)}", False,
-                                       "white")
-
-            screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
+                screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
 
 
 def draw_sun(screen: pygame.Surface, screen_status: lib.models.screen.Screen, icons: dict[str: pygame.Surface]):

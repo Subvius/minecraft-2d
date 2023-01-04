@@ -24,7 +24,7 @@ class Sound:
 
     def stop_music(self, name: str, milliseconds: int = 100):
         if name in list(self.sounds.keys()):
-            self.sounds.get(name).fadeout(milliseconds)
+            pygame.mixer.music.fadeout(milliseconds)
 
     def load_all(self):
         for file in os.listdir("lib/assets/sounds/"):

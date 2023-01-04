@@ -1,5 +1,7 @@
 import pygame
 
+from lib.models.settings import Settings
+
 
 class Button:
     def __init__(self, label: str = "Button Label", width: int = 100, height: int = 20, background_color: str = "black",
@@ -14,10 +16,14 @@ class Button:
         self.is_hovered = False
         self.hover_color = hover_color
         self.id = id
+        self.high_lighted = False
 
     def render(self, surface, font):
         text_surface = font.render(self.label, False, self.text_color)
         pygame.draw.rect(surface, self.background_color if not self.is_hovered else self.hover_color, self.rect)
+        if self.high_lighted:
+            pygame.draw.rect(surface, (10, 10, 225), self.rect, width=2)
+
         surface.blit(text_surface, (self.rect.midtop[0] - len(self.label) * 3.5, self.rect.midtop[1]))
 
     def on_mouse_motion(self, x, y):
@@ -32,3 +38,31 @@ class Button:
         if self.rect.colliderect(rect):
             return True
         return False
+
+    def toggle_high_light(self):
+        self.high_lighted = not self.high_lighted
+
+
+def set_controls_buttons(settings: Settings, window_size: list[int]) -> list[Button]:
+    buttons = [
+        Button(label="Done", width=200, height=25, background_color="gray", text_color="white",
+               x=window_size[0] // 2 - 210, y=int(window_size[1] // 1.075), hover_color="lightgray", id=9
+               ),
+        Button(label="Reset Keys", width=200, height=25, background_color="gray", text_color="white",
+               x=window_size[0] // 2, y=int(window_size[1] // 1.075), hover_color="lightgray", id=10),
+    ]
+    values = settings.convert_to_dict()
+    default_keys = list(values.keys())
+    for i in range(9):
+        y = 30 * i
+        key = default_keys[i]
+        value = values.get(key)
+        if type(value) == int:
+            text = f'Button {value}'
+        else:
+            text = value.replace("K_", "").upper()
+        buttons.append(Button(label=text, width=100, height=25, background_color="gray", text_color="white",
+                              x=window_size[0] // 2 + 75, y=100 - 15 + y, hover_color="lightgray",
+                              id=i), )
+
+    return buttons

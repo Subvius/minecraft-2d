@@ -33,7 +33,6 @@ class Screen:
                 if self.inventories[inv]:
                     self.inventories[inv] = not self.inventories[inv]
                     toggled = True
-                    self.toggle_pause()
                     break
             if not toggled:
                 self.show_inventory = not self.show_inventory
@@ -42,6 +41,7 @@ class Screen:
                 self.inventories[inventory] = not self.inventories[inventory]
             except KeyError:
                 print('INVALID INVENTORY NAME -' + inventory)
+        self.toggle_pause()
 
     def change_dimension(self, dimension):
         self.dimension = dimension
@@ -49,14 +49,14 @@ class Screen:
     def set_mouse_pos(self, pos):
         self.mouse_pos = pos
 
-    def update_creative_scroll(self, momentum: int, blocks_data:dict):
+    def update_creative_scroll(self, momentum: int, blocks_data: dict):
         self.creative_inventory_scroll += momentum
         if self.creative_inventory_scroll < 0:
             self.creative_inventory_scroll = 0
         elif self.creative_inventory_scroll > len(list(blocks_data.keys())) // 9:
             self.creative_inventory_scroll = len(list(blocks_data.keys())) // 9
 
-    def update_creative_text(self, text:str):
+    def update_creative_text(self, text: str):
         self.creative_inventory_text_field_text = text
 
     def reset_world_time(self):
