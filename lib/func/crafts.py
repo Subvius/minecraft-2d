@@ -70,7 +70,10 @@ def check_if_can_craft(four_slots: bool, slots: list, recipes: dict):
                                 pattern[row] = pattern[row].replace(kk, new_value)
                         elif recipes[value]['key'][kk].get('tag', None) is not None:
                             for row in range(len(pattern)):
-                                pattern[row] = pattern[row].replace(kk, recipes[value]['key'][kk]['tag'])
+                                new_value = recipes[value]['key'][kk]['tag']
+                                if new_value == "stone_tool_materials":
+                                    new_value = 'cobblestone'
+                                pattern[row] = pattern[row].replace(kk, new_value)
                     except AttributeError:
                         print(value)
             if value == 'acacia_boat':

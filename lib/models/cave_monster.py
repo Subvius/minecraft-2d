@@ -1,4 +1,4 @@
-from lib.models.entity import *
+from lib.models.entity import Entity
 
 
 class CaveMonster(Entity):

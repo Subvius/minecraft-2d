@@ -1,12 +1,7 @@
 import datetime
 import math
-import random
-
 import noise
-import pygame
-
 import lib.models.screen
-from lib.models.player import Player
 from lib.func.blocks import *
 from lib.models.entity import *
 
@@ -46,7 +41,7 @@ def is_close(x, y, x0, y0, radius) -> bool:
     return ((x - x0) ** 2 + (y - y0) ** 2) <= (radius * 32) ** 2
 
 
-def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Player, screen_status):
+def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Player, screen_status, session_stats):
     pos = event.pos
     x = pos[0]
     y = pos[1]
@@ -66,6 +61,8 @@ def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Pl
                         game_map[value_y][value_x] = selected['numerical_id']
                         map_objects.append(pygame.Rect(value_x * 32, value_y * 32, 32, 32))
                         player.remove_from_inventory(player.selected_inventory_slot, 1)
+                        session_stats.update({"blocks_placed": session_stats.get('blocks_placed', 0) + 1})
+
             elif tile == "58":
                 screen_status.toggle_inventory("crafting_table")
         except IndexError:
@@ -75,7 +72,7 @@ def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Pl
 
 
 def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Player, hold_start, blocks_data,
-                  falling_items):
+                  falling_items, mobs: list[Entity], check_mobs: bool, sounds, session_stats: dict):
     x = pos[0]
     y = pos[1]
     # максимальная дистанция 4 блока (сторона 32)
@@ -99,6 +96,8 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
                             hold_start = now
 
                             num_id = tile
+                            if tile == "3":
+                                num_id = "4"
                             x += scroll[0]
                             y += scroll[1]
                             x //= 32
@@ -106,17 +105,49 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
                             x += 8
                             y //= 32
                             y *= 32
+
                             falling_items.append({
                                 "direction": "down",
                                 "x": x,
                                 "y": y,
                                 "numerical_id": num_id
                             })
+                            session_stats.update({"blocks_mined": session_stats.get('blocks_mined', 0) + 1})
+                            if tile in ["16", "21", "73", "129", "56"]:
+                                for _ in range(random.randint(0, 5)):
+                                    falling_items.append({
+                                        "direction": "down",
+                                        "x": x,
+                                        "y": y,
+                                        "numerical_id": "998"
+                                    })
+
                         else:
                             time_spent = now - hold_start
                             percentage = (time_spent / datetime.timedelta(
                                 seconds=breaking_time)) * 100
                             game_map[value_y][value_x] = f"{tile}-{int(percentage)}"
+            if check_mobs:
+                mouse_rect = pygame.Rect(x + scroll[0], y + scroll[1], 1, 1)
+                holding_item = player.inventory[0][player.selected_inventory_slot]
+                damage = 1
+                if holding_item is not None:
+                    item = blocks_data[holding_item['numerical_id']]
+                    damage = item.get("damage", 1)
+                for i in range(len(mobs)):
+                    mob = mobs[i]
+                    if mob.rect.colliderect(mouse_rect):
+                        dead = mob.damage(damage, sounds)
+                        if dead:
+                            mob.change_condition("death")
+                            session_stats["mob_killed"] += 1
+                            for _ in range(5):
+                                falling_items.append({
+                                    "direction": "down",
+                                    "x": value_x * 32 + 8,
+                                    "y": value_y * 32,
+                                    "numerical_id": "998"
+                                })
 
         except IndexError:
             print('доделать!!!!! (lib/models/map.py), line: 26')
@@ -125,7 +156,8 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
 
 
 def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possible_x: list[int], possible_y: list[int],
-              scroll: list[int], map_objects: list[pygame.Rect], game_map: list, images, paused: bool):
+              scroll: list[int], map_objects: list[pygame.Rect], game_map: list, images, paused: bool, font, icons,
+              screen_status, sounds):
     for mob in mobs:
         rect = mob.rect
         if rect.x // 32 in possible_x and rect.y // 32 in possible_y:
@@ -136,6 +168,12 @@ def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possib
             screen.blit(pygame.transform.flip(pygame.transform.scale(image, (mob.width, mob.height)),
                                               mob.moving_direction == 'left', False),
                         (rect.x - scroll[0], rect.y - scroll[1]))
+
+            draw_rect_alpha(screen, (0, 0, 0, 127,), (rect.x - scroll[0], rect.y - scroll[1] - 30, 34, 20))
+            text_surf = font.render(mob.hp.__str__(), False, "gray")
+            screen.blit(text_surf, (rect.x - scroll[0] + 5, rect.y - scroll[1] - 30))
+            screen.blit(pygame.transform.scale(icons['heart'], (8, 8)),
+                        (rect.x - scroll[0] + 23, rect.y - scroll[1] - 25,))
         else:
             mobs.remove(mob)
 
@@ -146,6 +184,12 @@ def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possib
             mob.set_destination(None)
         destination = mob.destination
 
+        current_time = pygame.time.get_ticks()
+
+        if screen_status.world_time < 36000 and not mob.is_friendly:
+            if current_time - mob.last_sun_damage > mob.sun_damage_delay:
+                mob.damage(1, sounds)
+                mob.last_sun_damage = current_time
         movement = [0, 0]
         if destination is not None:
             if rect.x < destination[0]:
@@ -154,13 +198,18 @@ def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possib
             elif rect.x > destination[0]:
                 movement[0] -= 1 * mob.speed
                 mob.moving_direction = 'right'
-
-        if movement == [0, 0]:
-            if mob.condition != 'idle':
-                mob.change_condition('idle')
+        if mob.condition not in ['idle', 'walk'] and mob.frame + 1 < len(
+                images[mob.mob_type][mob.condition][mob.condition]):
+            pass
         else:
-            if mob.condition == 'idle':
-                mob.change_condition('walk')
+            if mob.is_dead:
+                mobs.remove(mob)
+            if movement == [0, 0]:
+                if mob.condition != 'idle':
+                    mob.change_condition('idle')
+            else:
+                if mob.condition == 'idle':
+                    mob.change_condition('walk')
 
         try:
             if game_map[rect.y // 32 + 1][rect.x // 32] == "0":
@@ -168,31 +217,32 @@ def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possib
         except IndexError:
             # Escaped from map :(
             pass
+        if not mob.is_dead:
+            movement[1] += mob.vertical_momentum
+            rect, collisions = move(rect, movement, map_objects)
+            mob.vertical_momentum += 0.5
+            if mob.vertical_momentum > 3:
+                mob.vertical_momentum = 3
+            if collisions['bottom']:
+                mob.vertical_momentum = 0
 
-        movement[1] += mob.vertical_momentum
-        rect, collisions = move(rect, movement, map_objects)
-        mob.vertical_momentum += 0.5
-        if mob.vertical_momentum > 3:
-            mob.vertical_momentum = 3
-        if collisions['bottom']:
-            mob.vertical_momentum = 0
+            if movement[0] > 0 and collisions['bottom'] and collisions['right'] and mob.vertical_momentum == 0:
+                mob.vertical_momentum -= mob.jump_height * 4.5
 
-        if movement[0] > 0 and collisions['bottom'] and collisions['right'] and mob.vertical_momentum == 0:
-            mob.vertical_momentum -= mob.jump_height * 4.5
+            elif movement[0] < 0 and collisions['bottom'] and collisions['left'] and mob.vertical_momentum == 0:
+                mob.vertical_momentum -= mob.jump_height * 4.5
 
-        elif movement[0] < 0 and collisions['bottom'] and collisions['left'] and mob.vertical_momentum == 0:
-            mob.vertical_momentum -= mob.jump_height * 4.5
+            mob.rect = rect
 
-        mob.rect = rect
-        current_time = pygame.time.get_ticks()
+            if mob.rect.topleft == player.rect.midtop:
+                if current_time - mob.last_attack >= mob.attack_delay and player.game_mode == 'survival' and \
+                        not mob.is_friendly:
+                    player.damage(mob.attack_damage)
+                    mob.last_attack = current_time
+                    mob.change_condition("attack")
         if current_time - mob.last_update > mob.animation_duration:
             mob.update_image(len(images[mob.mob_type][mob.condition][mob.condition]))
             mob.last_update = current_time
-
-        if mob.rect.topleft == player.rect.midtop:
-            if current_time - mob.last_attack >= mob.attack_delay:
-                player.damage(mob.attack_damage)
-                mob.last_attack = current_time
 
     return mobs
 
@@ -226,7 +276,7 @@ def draw_inventory(screen, inventory, width, height, font, selected_slot, images
     color = (0, 10, 0)
     # selected_color = (145, 145, 145)
     selected_color = "white"
-
+    draw_rect_alpha(screen, (0, 0, 0, 127), (width // 2 - 32 * 4.5, height - 32, 32 * 9, 32))
     for i in range(9):
         rect = pygame.Rect(width // 2 - 32 * 4.5 + i * 32, height - 32, 32, 32)
         pygame.draw.rect(screen, selected_color if i == selected_slot else color,
@@ -237,7 +287,7 @@ def draw_inventory(screen, inventory, width, height, font, selected_slot, images
             count = inventory[0][i]['quantity']
             if count > 1:
                 text_surface = font.render(f"{inventory[0][i]['quantity']}", False,
-                                           selected_color if i == selected_slot else color)
+                                           "white")
 
                 screen.blit(text_surface, (rect.x + 16, rect.y + 16))
 
@@ -563,7 +613,7 @@ def cut_progress_bar(image: pygame.Surface, percent: float) -> pygame.Surface:
     return surf
 
 
-def draw_exp_bar(screen, player, icons):
+def draw_exp_bar(screen, player, icons, font):
     empty_bar_image: pygame.Surface = icons['empty_exp_bar']
     full_bar_image: pygame.Surface = icons['full_exp_bar']
 
@@ -579,6 +629,11 @@ def draw_exp_bar(screen, player, icons):
         pygame.transform.scale(cut_progress_bar(full_bar_image, percent),
                                (32 * 9 * percent, empty_bar_image.get_height() + 5)),
         (x, y))
+    level_surf = font.render(f"{player.level}", 1, (0, 0, 0))
+    screen.blit(level_surf, (width // 2 - 4, height - 57))
+
+    level_surf = font.render(f"{player.level}", 1, (120, 240, 29))
+    screen.blit(level_surf, (width // 2 - 5, height - 58))
 
 
 def draw_tabs(screen, is_selected_page, x, y, s_color, uns_color, image, on_bottom: bool):
@@ -793,49 +848,14 @@ def draw_sun(screen: pygame.Surface, screen_status: lib.models.screen.Screen, ic
     image = icons["sun"] if world_time / DAY_TIME * 100 <= 100 else icons["moon"]
 
     pos = (width // 100 * day_night_cycle_percent, (
-            Y_MAX - Y_MAX // 100 * day_night_cycle_percent) if day_night_cycle_percent <= 50 else \
-        Y_MIN + Y_MAX // 100 * (day_night_cycle_percent - 50))
+            Y_MAX - Y_MAX // 100 * day_night_cycle_percent) if day_night_cycle_percent <= 50 else (
+                Y_MIN + Y_MAX // 100 * (day_night_cycle_percent - 50)))
     screen.blit(pygame.transform.scale(image, (64, 64)), pos)
 
 
 def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimension):
     x_max = 8 * quantity_of_chunks
     game_map = [["0" for _ in range(x_max)] for _ in range(y_max)]
-
-    mountains = [
-        r"""       /\
-      /33\
-     /3333\
-    /333333\
-   /33333333\
-  /3333333333\
- /333333333333\
-/33333333333333\ """,
-        r"""       /\    /\
-      /33\  /33\
-     /3333\/3333\
-    /333333333333\
-   /33333333333333\
-  /3333333333333333\
- /333333333333333333\
-/33333333333333333333\ """,
-        r"""       /\
-      /33\  /\
-     /3333\/33\
-    /3333333333\
-   /333333333333\
-  /33333333333333\
- /3333333333333333\
-/333333333333333333\ """,
-        r"""       /\
-      /33\
-     /3333\
-    /333333\  /\
-   /33333333\/33\
-  /33333333333333\
- /3333333333333333\
-/333333333333333333\ """
-    ]
 
     trees = [
         """ 1111

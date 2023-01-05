@@ -26,14 +26,23 @@ def load_images(blocks_data: dict):
     icons.update({"moon": pygame.image.load("lib/assets/moon.png")})
 
     for folder in os.listdir("lib/assets/animations/mobs/"):
-        mob_images.update({folder: {}})
-        for file in os.listdir(f"lib/assets/animations/mobs/{folder}"):
-            mob_images[folder][file.split(".")[0]] = pygame.image.load(f"lib/assets/animations/mobs/{folder}/{file}")
+        if folder != ".DS_Store":
+            mob_images.update({folder: {}})
+            for file in os.listdir(f"lib/assets/animations/mobs/{folder}"):
+                if file != ".DS_Store":
+                    mob_images[folder][file.split(".")[0]] = pygame.image.load(
+                        f"lib/assets/animations/mobs/{folder}/{file}")
 
     mob = CaveMonster(20, 20, 1, 2, 1, True, False, (0, 0), 32, 64, 8)
     mob.cut_sheet(mob_images["cave_monster"]["idle"], 4, 1, "idle", 120, 50)
     mob_images['cave_monster']['idle'] = mob.images
     mob.cut_sheet(mob_images["cave_monster"]["walk"], 6, 1, "walk", 120, 45)
     mob_images['cave_monster']['walk'] = mob.images
+    mob.cut_sheet(mob_images["cave_monster"]["hurt"], 4, 1, "hurt", 120, 50)
+    mob_images['cave_monster']['hurt'] = mob.images
+    mob.cut_sheet(mob_images["cave_monster"]["death"], 4, 1, "death", 120, 50)
+    mob_images['cave_monster']['death'] = mob.images
+    mob.cut_sheet(mob_images["cave_monster"]["attack"], 4, 1, "attack", 120, 50)
+    mob_images['cave_monster']['attack'] = mob.images
 
     return images, icons, mob_images

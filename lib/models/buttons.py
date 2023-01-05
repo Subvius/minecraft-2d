@@ -5,7 +5,7 @@ from lib.models.settings import Settings
 
 class Button:
     def __init__(self, label: str = "Button Label", width: int = 100, height: int = 20, background_color: str = "black",
-                 text_color: str = "white", x: int = 0, y: int = 0, hover_color: str = "gray", id: int = 1
+                 text_color: str = "white", x: int = 0, y: int = 0, hover_color: str = "gray", uniq_id: int = 1
                  ):
         self.label = label
         self.width = width
@@ -15,7 +15,7 @@ class Button:
         self.rect = pygame.Rect(x, y, self.width, self.height)
         self.is_hovered = False
         self.hover_color = hover_color
-        self.id = id
+        self.id = uniq_id
         self.high_lighted = False
 
     def render(self, surface, font):
@@ -43,13 +43,13 @@ class Button:
         self.high_lighted = not self.high_lighted
 
 
-def set_controls_buttons(settings: Settings, window_size: list[int]) -> list[Button]:
+def set_controls_buttons(settings: Settings, window_size: tuple[int, int]) -> list[Button]:
     buttons = [
         Button(label="Done", width=200, height=25, background_color="gray", text_color="white",
-               x=window_size[0] // 2 - 210, y=int(window_size[1] // 1.075), hover_color="lightgray", id=9
+               x=window_size[0] // 2 - 210, y=int(window_size[1] // 1.075), hover_color="lightgray", uniq_id=9
                ),
         Button(label="Reset Keys", width=200, height=25, background_color="gray", text_color="white",
-               x=window_size[0] // 2, y=int(window_size[1] // 1.075), hover_color="lightgray", id=10),
+               x=window_size[0] // 2, y=int(window_size[1] // 1.075), hover_color="lightgray", uniq_id=10),
     ]
     values = settings.convert_to_dict()
     default_keys = list(values.keys())
@@ -63,6 +63,6 @@ def set_controls_buttons(settings: Settings, window_size: list[int]) -> list[But
             text = value.replace("K_", "").upper()
         buttons.append(Button(label=text, width=100, height=25, background_color="gray", text_color="white",
                               x=window_size[0] // 2 + 75, y=100 - 15 + y, hover_color="lightgray",
-                              id=i), )
+                              uniq_id=i), )
 
     return buttons

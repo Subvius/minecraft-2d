@@ -80,13 +80,13 @@ class Player:
             self.is_dead = True
             self.hp = 0
 
-    def add_exp(self, exp, sounds: Sound,):
+    def add_exp(self, exp, sounds: Sound, ):
         self.exp += exp
         sounds.play_sound('exp')
-        while self.get_exp_until_next_level(self.exp, self.level + 1) > 0:
+        if self.get_exp_until_next_level(self.exp, self.level + 1) <= 0:
             self.level_up(sounds)
 
-    def level_up(self,  sounds: Sound,):
+    def level_up(self, sounds: Sound, ):
         self.level += 1
         sounds.play_sound('levelup')
 

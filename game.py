@@ -1,12 +1,8 @@
-import datetime
 import json
-import os
-import random
 import sqlite3
 
 import sys
 
-import pygame.image
 from pygame.locals import *
 
 from lib.func.load_images import load_images
@@ -18,14 +14,13 @@ from lib.models.cave_monster import *
 from lib.models.sound import Sound
 from lib.models.settings import Settings
 from lib.func.crafts import *
+from lib.func.save_world import save
+from lib.func.start import get_worlds
 
 clock = pygame.time.Clock()
 
 con = sqlite3.connect('lib/storage/database.db')
 cursor = con.cursor()
-
-worlds = cursor.execute("SELECT * FROM worlds").fetchall()
-worlds_rect = list()
 
 pygame.init()
 pygame.font.init()
@@ -37,13 +32,9 @@ width, height = 1184, 768
 WINDOW_SIZE = (width, height)
 JUMP_HEIGHT = 2
 
-screen = pygame.display.set_mode(WINDOW_SIZE, 0, 32)
+worlds, worlds_rect = get_worlds(cursor, WINDOW_SIZE)
 
-for world in worlds:
-    x = WINDOW_SIZE[0] // 2 - 210
-    y = 200 + 60 * world[0]
-    rect = pygame.Rect(x, y, 410, 55)
-    worlds_rect.append(rect)
+screen = pygame.display.set_mode(WINDOW_SIZE, 0, 32)
 
 display = pygame.Surface((width, height))
 
@@ -59,7 +50,7 @@ hold_start = datetime.datetime.now()
 hold_end = datetime.datetime.now()
 hold_pos = [0, 0]
 
-crafting_table_slots = [[None for _ in range(3)] for __ in range(3)]
+crafting_table_slots = [[None for _ in range(3)] for _ in range(3)]
 inventory_crafting_slots = [[None for _ in range(2)] for __ in range(2)]
 craft_result = None
 with open('lib/storage/recipes.json', "r") as f:
@@ -84,6 +75,8 @@ if settings.play_music:
     sounds.play_music("minecraft_music", -1)
 
 screen_status = Screen()
+map_objects = []
+scroll = [0, 0]
 
 falling_items = []
 close_to_portal = False
@@ -111,62 +104,69 @@ player.cut_sheet(pygame.image.load("lib/assets/animations/player/throw.png"), 4,
 
 main_screen_buttons = [
     Button(label="settings", width=150, height=25, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] // 2 - 75, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", id=1),
+           x=WINDOW_SIZE[0] // 2 - 75, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", uniq_id=1),
     Button(label="X", width=22, height=22, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] - 50, y=25, hover_color="lightgray", id=2),
+           x=WINDOW_SIZE[0] - 50, y=25, hover_color="lightgray", uniq_id=2),
     Button(label="singleplayer", width=150, height=25, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] // 2 - 75, y=WINDOW_SIZE[1] // 2 - 15, hover_color="lightgray", id=0
+           x=WINDOW_SIZE[0] // 2 - 75, y=WINDOW_SIZE[1] // 2 - 15, hover_color="lightgray", uniq_id=0
            )
 
 ]
 
 world_select_buttons = [
     Button(label="Create New World", width=200, height=25, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] // 2, y=int(WINDOW_SIZE[1] // 1.075), hover_color="lightgray", id=1),
+           x=WINDOW_SIZE[0] // 2, y=int(WINDOW_SIZE[1] // 1.075), hover_color="lightgray", uniq_id=1),
     Button(label="Cancel", width=200, height=25, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] // 2 - 210, y=int(WINDOW_SIZE[1] // 1.075), hover_color="lightgray", id=0
+           x=WINDOW_SIZE[0] // 2 - 210, y=int(WINDOW_SIZE[1] // 1.075), hover_color="lightgray", uniq_id=0
            )
 
 ]
 
 create_world_buttons = [
     Button(label="Create New World", width=200, height=25, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] // 2, y=int(WINDOW_SIZE[1] // 1.075), hover_color="lightgray", id=1),
+           x=WINDOW_SIZE[0] // 2, y=int(WINDOW_SIZE[1] // 1.075), hover_color="lightgray", uniq_id=1),
     Button(label="Cancel", width=200, height=25, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] // 2 - 210, y=int(WINDOW_SIZE[1] // 1.075), hover_color="lightgray", id=0
+           x=WINDOW_SIZE[0] // 2 - 210, y=int(WINDOW_SIZE[1] // 1.075), hover_color="lightgray", uniq_id=0
+           )
+
+]
+
+stats_buttons = [
+    Button(label="Done", width=200, height=25, background_color="gray", text_color="white",
+           x=WINDOW_SIZE[0] // 2 - 100, y=int(WINDOW_SIZE[1] // 1.075), hover_color="lightgray", uniq_id=0
            )
 
 ]
 
 game_menu_buttons = [
     Button(label="Back to Game", width=200, height=25, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 - 15, hover_color="lightgray", id=0),
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 - 15, hover_color="lightgray", uniq_id=0),
     Button(label="Options", width=95, height=25, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", id=1),
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", uniq_id=1),
     Button(label="Statistics", width=95, height=25, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] // 2 - 100 + 105, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", id=2),
+           x=WINDOW_SIZE[0] // 2 - 100 + 105, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", uniq_id=2),
     Button(label="Save and Quit to Title", width=200, height=25, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 45, hover_color="lightgray", id=3),
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 45, hover_color="lightgray", uniq_id=3),
 
 ]
 options_buttons = [
     Button(label="Music & Sounds...", width=200, height=25, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 - 15, hover_color="lightgray", id=0),
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 - 15, hover_color="lightgray", uniq_id=0),
     Button(label="Controls...", width=200, height=25, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", id=1),
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", uniq_id=1),
     Button(label="Done", width=200, height=25, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 45, hover_color="lightgray", id=2),
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 45, hover_color="lightgray", uniq_id=2),
 ]
 
 music_and_sounds_buttons = [
     Button(label=f"Music: {'On' if settings.play_music else 'Off'}", width=200, height=25, background_color="gray",
            text_color="white",
-           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 - 15, hover_color="lightgray", id=0),
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 - 15, hover_color="lightgray", uniq_id=0),
     Button(label=f"Blocks: {'On' if settings.blocks_sound else 'Off'}", width=200, height=25, background_color="gray",
            text_color="white",
-           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", id=1),
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", uniq_id=1),
     Button(label="Done", width=200, height=25, background_color="gray", text_color="white",
-           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 45, hover_color="lightgray", id=2),
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 45, hover_color="lightgray", uniq_id=2),
 ]
 
 controls_buttons = set_controls_buttons(settings, WINDOW_SIZE)
@@ -182,13 +182,36 @@ WALK_SOUND_DELAY = 500
 walk_sound = 1
 last_walk_sound_play = pygame.time.get_ticks()
 
+session_stats = {
+    "blocks_mined": 0,
+    "blocks_placed": 0,
+    "mob_killed": 0,
+    "total_experience_gain": 0,
+    "total_play_time": datetime.datetime.now(),
+    "distance_traveled": 0,
+    "total_jumps": 0,
+    "successful_crafts": 0
+}
+
 mobs = list()
 
 while True:
     if screen_status.screen == 'game':
         pygame.display.set_caption(f"Minecraft 2D - {screen_status.world[4]}")
         if screen_status.dimension == 'overworld':
-            display.fill((146, 244, 255))
+            if screen_status.world_time < 36000:
+                percent = math.ceil(screen_status.world_time / 36000 * 100)
+                if percent <= 10 or percent >= 90:
+                    if 10 >= percent >= 7 or 93 >= percent >= 90:
+                        display.fill((255, 239, 122))
+                    elif 7 > percent >= 4 or 96 >= percent > 93:
+                        display.fill((247, 193, 106))
+                    elif 4 > percent >= 0 or 100 >= percent > 96:
+                        display.fill((255, 107, 62))
+                else:
+                    display.fill((120, 167, 255))
+            else:
+                display.fill((39, 33, 78))
         elif screen_status.dimension == 'nether':
             display.fill((88, 30, 65))
 
@@ -237,21 +260,33 @@ while True:
                     block_id = separated[0]
                     percentage = math.floor(float(separated[1]) / 10)
                 if tile.count(":") > 0:
+
                     data = json.loads(tile)
                     block_id = list(data.keys())[0]
+                    if game_map[tile_y + 1][tile_x] == "0":
+                        for key in list(data.keys()):
+                            for i in range(data[key]):
+                                falling_items.append({
+                                    "direction": "down",
+                                    "x": tile_x * 32 + 8,
+                                    "y": tile_y * 32,
+                                    "numerical_id": key
+                                })
+                        game_map[tile_y][tile_x] = "0"
+                    else:
+                        block = blocks_data[block_id]
+                        display.blit(pygame.transform.scale(images[block['item_id']], (16, 16)),
+                                     (tile_x * 32 - scroll[0] + 8,
+                                      tile_y * 32 - scroll[1] + levitating_blocks_animation))
+                        if not blocks_animation_reverse and not screen_status.paused:
+                            levitating_blocks_animation += .1
+                            if int(levitating_blocks_animation) >= 12:
+                                blocks_animation_reverse = True
 
-                    block = blocks_data[block_id]
-                    display.blit(pygame.transform.scale(images[block['item_id']], (16, 16)),
-                                 (tile_x * 32 - scroll[0] + 8, tile_y * 32 - scroll[1] + levitating_blocks_animation))
-                    if not blocks_animation_reverse and not screen_status.paused:
-                        levitating_blocks_animation += .1
-                        if int(levitating_blocks_animation) >= 12:
-                            blocks_animation_reverse = True
-
-                    if blocks_animation_reverse and not screen_status.paused:
-                        levitating_blocks_animation -= .1
-                        if int(levitating_blocks_animation) <= 6:
-                            blocks_animation_reverse = False
+                        if blocks_animation_reverse and not screen_status.paused:
+                            levitating_blocks_animation -= .1
+                            if int(levitating_blocks_animation) <= 6:
+                                blocks_animation_reverse = False
 
                 if block_id != '0' and not tile.count(":"):
                     block = blocks_data[block_id]
@@ -370,6 +405,11 @@ while True:
         player_rect.height = 64
         player.rect = player_rect
 
+        temp_rect = player_rect.copy()
+        temp_rect.x -= player_movement[0]
+        if temp_rect.x // 32 != player.rect.x // 32:
+            session_stats['distance_traveled'] += 1
+
         if player.condition == 'run' and collisions['bottom'] and settings.blocks_sound:
             numerical_id = game_map[player.rect.y // 32 + 2][player.rect.x // 32]
             if numerical_id.count("{") == 0 and numerical_id != '0':
@@ -393,17 +433,26 @@ while True:
         if can_pick_up[0]:
             blocks: dict = json.loads(can_pick_up[1])
             for block in blocks:
+                if block == "998":
+                    for _ in range(blocks.get(block, 1)):
+                        player.add_exp(3, sounds)
+                    blocks.update({block: 0})
+                    continue
                 for row in player.inventory:
                     row_index = player.inventory.index(row)
                     for slot in row:
                         slot_index = row.index(slot)
+                        data = blocks_data[block]
+                        max_size = data['max_stack_size']
                         if slot is not None:
-                            if slot['quantity'] < 64 and slot['numerical_id'] == block and blocks.get(block, 0) > 0:
+
+                            if slot['quantity'] < max_size and slot['numerical_id'] == block and blocks.get(block,
+                                                                                                            0) > 0:
                                 slot['quantity'] += blocks.get(block, 0)
 
-                                if slot['quantity'] > 64:
-                                    blocks.update({block: slot['quantity'] - 64})
-                                    slot['quantity'] = 64
+                                if slot['quantity'] > max_size:
+                                    blocks.update({block: slot['quantity'] - max_size})
+                                    slot['quantity'] = max_size
                                 else:
                                     blocks.update({block: 0})
                         else:
@@ -416,9 +465,9 @@ while True:
                                     "type": "block"
                                 }
 
-                                if slot['quantity'] > 64:
-                                    blocks.update({block: slot['quantity'] - 64})
-                                    slot['quantity'] = 64
+                                if slot['quantity'] > max_size:
+                                    blocks.update({block: slot['quantity'] - max_size})
+                                    slot['quantity'] = max_size
                                 else:
                                     blocks.update({block: 0})
 
@@ -446,6 +495,9 @@ while True:
         else:
             air_timer += 1
 
+        mobs = draw_mobs(display, player, mobs, possible_x, possible_y, scroll, map_objects, game_map, mob_images,
+                         screen_status.paused, inventory_font, icons, screen_status, sounds)
+
         display.blit(
             pygame.transform.scale(pygame.transform.flip(player.image, player.moving_direction == "left", False),
                                    (32, 64)),
@@ -461,7 +513,8 @@ while True:
                                                                              game_map,
                                                                              player,
                                                                              hold_start,
-                                                                             blocks_data, falling_items)
+                                                                             blocks_data, falling_items, mobs, False,
+                                                                             sounds, session_stats)
 
         screen.blit(pygame.transform.scale(display, WINDOW_SIZE), (0, 0))
 
@@ -519,10 +572,7 @@ while True:
                        blocks_data)
         if player.game_mode == 'survival':
             draw_health_bar(screen, player, width, height, icons)
-            draw_exp_bar(screen, player, icons)
-
-        mobs = draw_mobs(screen, player, mobs, possible_x, possible_y, scroll, map_objects, game_map, mob_images,
-                         screen_status.paused)
+            draw_exp_bar(screen, player, icons, main_screen_font)
 
         if screen_status.dimension == "overworld":
             draw_sun(screen, screen_status, icons)
@@ -567,6 +617,35 @@ while True:
 
         for button in music_and_sounds_buttons:
             button.render(screen, main_screen_font)
+    elif screen_status.screen == 'statistics':
+        pygame.display.set_caption(f"Minecraft 2D - {screen_status.world[4]} Stats")
+        screen.blit(images['world_select_bg'], (0, 0))
+
+        for button in stats_buttons:
+            button.render(screen, main_screen_font)
+
+        with open("lib/storage/statistics.json", "r") as f:
+            stats: dict = json.load(f)
+        world_stats = stats[screen_status.world[1].__str__()]
+        keys = list(world_stats.keys())
+        for index in range(len(keys)):
+            element = keys[index]
+            value = world_stats[element]
+            if element.count("distance") > 0:
+                value = f"{value}m"
+            if element.count("play_time") > 0:
+                value = str(datetime.timedelta(seconds=value)) + "s"
+            element = element.split("_")
+            for i in range(len(element)):
+                word = element[i].capitalize()
+                element[i] = word
+
+            y = 30 * index
+            title = main_screen_font.render(" ".join(element), False, "white")
+            screen.blit(title, (WINDOW_SIZE[0] // 2 + 75 - 250, 100 - 15 + y))
+
+            desc = main_screen_font.render(f"{value}", False, "white")
+            screen.blit(desc, (WINDOW_SIZE[0] // 2 + 75, 100 - 15 + y))
     elif screen_status.screen == 'controls':
         pygame.display.set_caption("Minecraft 2D - Controls Options")
         screen.blit(images['world_select_bg'], (0, 0))
@@ -585,7 +664,6 @@ while True:
             y = 30 * index
             title = main_screen_font.render(" ".join(element), False, "white")
             screen.blit(title, (WINDOW_SIZE[0] // 2 + 75 - 250, 100 - 15 + y))
-
     elif screen_status.screen == 'main':
         pygame.display.set_caption("Minecraft 2D")
         screen.blit(images['main_screen_bg'], (0, 0))
@@ -606,7 +684,6 @@ while True:
             desc = main_screen_font.render(world[3], False, 'gray')
             screen.blit(title, (rect.x + 15, rect.y + 5))
             screen.blit(desc, (rect.x + 15, rect.y + 25))
-
     elif screen_status.screen == 'create_world':
         pygame.display.set_caption("Minecraft 2D - create new world")
         screen.blit(images['world_select_bg'], (0, 0))
@@ -625,47 +702,18 @@ while True:
         if event.type == QUIT:
             pygame.quit()
 
-            if screen_status.world is not None:
-                if screen_status.dimension == 'overworld':
-                    with open("lib/storage/worlds_data.json", "r") as f:
-                        data_json = json.load(f)
-
-                    data_json[str(screen_status.world[1])]["blocks"] = game_map
-                    data_json[str(screen_status.world[1])]["player_inventory"] = player.inventory
-                    data_json[str(screen_status.world[1])]["player_hp"] = player.hp
-                    data_json[str(screen_status.world[1])]['player_coord'] = (player.rect.x, player.rect.y)
-                    data_json[str(screen_status.world[1])]['world_time'] = screen_status.world_time
-                    data_json[str(screen_status.world[1])]['dimension'] = 'overworld'
-
-                    with open("lib/storage/worlds_data.json", "w") as f:
-                        json.dump(data_json, f)
-                else:
-                    if screen_status.dimension == 'nether':
-                        with open("lib/storage/nether_worlds_data.json", "r") as f:
-                            data_json = json.load(f)
-
-                        data_json[str(screen_status.world[1])]["blocks"] = game_map
-                        data_json[str(screen_status.world[1])]['player_coord'] = (player.rect.x, player.rect.y)
-                        with open("lib/storage/nether_worlds_data.json", "w") as f:
-                            json.dump(data_json, f)
-
-                    with open("lib/storage/worlds_data.json", "r") as f:
-                        data_json = json.load(f)
-
-                    data_json[str(screen_status.world[1])]["player_inventory"] = player.inventory
-                    data_json[str(screen_status.world[1])]["player_hp"] = player.hp
-                    data_json[str(screen_status.world[1])]['world_time'] = screen_status.world_time
-                    data_json[str(screen_status.world[1])]['dimension'] = 'nether'
-                    with open("lib/storage/worlds_data.json", "w") as f:
-                        json.dump(data_json, f)
-
-                cursor.execute(
-                    f"UPDATE worlds SET updatedAt = '{datetime.datetime.now().strftime('%d/%m/%Y, %H:%M')}'"
-                    f" WHERE seed = {screen_status.world[1]}")
-                con.commit()
+            save(game_map, player, screen_status, cursor, con, session_stats)
 
             sys.exit()
-
+        if (
+                event.type == pygame.WINDOWMINIMIZED or event.type == pygame.WINDOWFOCUSLOST) and \
+                screen_status.screen == "game":
+            if screen_status.paused and (
+                    screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]):
+                screen_status.toggle_inventory()
+                screen_status.toggle_pause()
+            elif not screen_status.paused:
+                screen_status.toggle_pause()
         if event.type == pygame.KEYDOWN and screen_status.screen == 'create_world' and text_field_focused:
             if event.key == pygame.K_BACKSPACE:
                 text_field_text = text_field_text[:-1]
@@ -675,7 +723,7 @@ while True:
 
         if event.type == pygame.MOUSEMOTION and screen_status.screen in ['main', 'world_select', 'create_world',
                                                                          "game", 'settings', 'music_options',
-                                                                         'controls']:
+                                                                         'controls', "statistics"]:
             if screen_status.screen == 'main':
                 for button in main_screen_buttons:
                     button.on_mouse_motion(*event.pos)
@@ -691,6 +739,10 @@ while True:
             elif screen_status.screen == 'music_options':
                 for button in music_and_sounds_buttons:
                     button.on_mouse_motion(*event.pos)
+            elif screen_status.screen == 'statistics':
+                for button in stats_buttons:
+                    button.on_mouse_motion(*event.pos)
+
             elif screen_status.screen == 'controls':
                 for button in controls_buttons:
                     button.on_mouse_motion(*event.pos)
@@ -710,6 +762,9 @@ while True:
             if btn is not None:
                 if btn.id == 0:
                     screen_status.change_scene('world_select')
+                    worlds, worlds_rect = get_worlds(cursor, WINDOW_SIZE)
+                elif btn.id == 1:
+                    screen_status.change_scene("settings")
                 elif btn.id == 2:
                     pygame.quit()
                     sys.exit()
@@ -740,6 +795,8 @@ while True:
                     data = data_json[str(world[1])]
                     dimension = data.get('dimension', "overworld")
                     player.inventory = data.get("player_inventory", player.inventory)
+                    player.exp = data.get("player_exp", 0)
+                    player.level = math.floor(player.get_level_from_exp())
                     player.hp = data.get("player_hp", player.max_hp)
                     if dimension == 'overworld':
                         coords = data["player_coord"]
@@ -758,6 +815,16 @@ while True:
                         screen_status.change_dimension("nether")
 
                     screen_status.set_world_time(int(data.get('world_time', 0)))
+                    session_stats = {
+                        "blocks_mined": 0,
+                        "blocks_placed": 0,
+                        "mob_killed": 0,
+                        "total_experience_gain": player.exp,
+                        "total_play_time": datetime.datetime.now(),
+                        "distance_traveled": 0,
+                        "total_jumps": 0,
+                        "successful_crafts": 0
+                    }
 
         elif event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'create_world':
             btn = None
@@ -769,6 +836,8 @@ while True:
             if btn is not None:
                 if btn.id == 0:
                     screen_status.change_scene('world_select')
+                    worlds, worlds_rect = get_worlds(cursor, WINDOW_SIZE)
+
                     text_field_text = ""
                 elif btn.id == 1:
                     now = datetime.datetime.now()
@@ -790,7 +859,8 @@ while True:
                         "player_coord": (1000 * 32 // 2, 60 * 32),
                         "blocks": data_json,
                         "player_inventory": inventory,
-                        'player_hp': 20
+                        'player_hp': 20,
+                        "player_exp": 0
                     }
                     with open("lib/storage/worlds_data.json", "w") as f:
                         json.dump(obj, f)
@@ -804,7 +874,20 @@ while True:
                     game_map = data_json
                     player.rect.x = 1000 * 32 // 2
                     player.rect.y = 60 * 32
+                    player.exp = 0
+                    player.level = math.floor(player.get_level_from_exp())
                     player.inventory = inventory
+                    screen_status.reset_world_time()
+                    session_stats = {
+                        "blocks_mined": 0,
+                        "blocks_placed": 0,
+                        "mob_killed": 0,
+                        "total_experience_gain": player.exp,
+                        "total_play_time": datetime.datetime.now(),
+                        "distance_traveled": 0,
+                        "total_jumps": 0,
+                        "successful_crafts": 0
+                    }
 
             rect = pygame.Rect(*event.pos, 1, 1)
             if rect.colliderect(input_box):
@@ -828,8 +911,11 @@ while True:
                 elif btn.id == 2:
                     screen_status.change_scene("statistics")
                 elif btn.id == 3:
-                    # TODO SAVE FUNCTION CALL
+                    save(game_map, player, screen_status, cursor, con, session_stats)
                     screen_status.change_scene("world_select")
+                    worlds, worlds_rect = get_worlds(cursor, WINDOW_SIZE)
+                    screen_status.set_world(None)
+
         elif event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'settings':
             btn = None
             for button in options_buttons:
@@ -843,7 +929,24 @@ while True:
                 elif btn.id == 1:
                     screen_status.change_scene('controls')
                 elif btn.id == 2:
-                    screen_status.change_scene('game')
+                    if screen_status.world is not None:
+                        screen_status.change_scene('game')
+                    else:
+                        screen_status.change_scene("main")
+        if event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'statistics':
+            btn = None
+            for button in stats_buttons:
+                res = button.on_mouse_click(*event.pos)
+                if res:
+                    btn = button
+                    break
+            if btn is not None:
+                if btn.id == 0:
+
+                    if screen_status.world is not None:
+                        screen_status.change_scene('game')
+                    else:
+                        screen_status.change_scene("main")
         elif event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'music_options':
             btn = None
             for button in music_and_sounds_buttons:
@@ -920,12 +1023,18 @@ while True:
                 and screen_status.screen == 'game' and (
                 not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
             map_objects, game_map = on_right_click(event, player.rect, map_objects, scroll, game_map, player,
-                                                   screen_status)
+                                                   screen_status, session_stats)
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == settings.attack and not screen_status.paused \
                 and screen_status.screen == 'game':
             holding_left_button = True
             hold_start = datetime.datetime.now()
             hold_pos = event.pos
+            map_objects, game_map, hold_start, falling_items = on_left_click(hold_pos, player.rect, map_objects, scroll,
+                                                                             game_map,
+                                                                             player,
+                                                                             hold_start,
+                                                                             blocks_data, falling_items, mobs, True,
+                                                                             sounds, session_stats)
         if event.type == pygame.MOUSEBUTTONUP and event.button == settings.attack and not screen_status.paused \
                 and screen_status.screen == 'game':
             holding_left_button = False
@@ -1011,24 +1120,31 @@ while True:
                                 selected_item = None
                             else:
                                 selected_item['quantity'] -= 1
-                    elif item is not None and selected_item is not None and button == 1:
+                    elif item is not None and selected_item is not None:
                         if item['item_id'] == selected_item['item_id']:
                             block = blocks_data[item['numerical_id']]
                             max_size = block.get("max_stack_size", 1)
                             if int(item["quantity"]) < max_size:
-                                item['quantity'] += selected_item['quantity']
+                                item['quantity'] += selected_item['quantity'] if button == 1 else 1
 
                                 if item['quantity'] > max_size:
                                     selected_item['quantity'] = item['quantity'] - max_size
                                     item['quantity'] = max_size
                                     player.inventory[row + 1][column - 1] = item
                                 else:
-                                    selected_item = None
+                                    if button == 1:
+                                        selected_item = None
+                                    else:
+                                        selected_item['quantity'] -= 1
+                                        if selected_item["quantity"] <= 0:
+                                            selected_item = None
                         else:
-                            player.inventory[row + 1][column - 1], selected_item = selected_item, \
-                                                                                   player.inventory[row + 1][column - 1]
-                            selected_item['x'] = mx
-                            selected_item['y'] = my
+                            if button == 1:
+                                player.inventory[row + 1][column - 1], selected_item = selected_item, \
+                                                                                       player.inventory[row + 1][
+                                                                                           column - 1]
+                                selected_item['x'] = mx
+                                selected_item['y'] = my
                 elif 10 <= mx - left <= 10 + 9 * 30 + 1 * 9 and 52 <= my - top <= 52 + 30 * 6 + 1 * 6 and \
                         player.game_mode == 'creative' and screen_status.show_inventory and \
                         player.creative_inventory_page != 'inventory':
@@ -1124,25 +1240,31 @@ while True:
                                     selected_item = None
                                 else:
                                     selected_item['quantity'] -= 1
-                        elif item is not None and selected_item is not None and button == 1:
+                        elif item is not None and selected_item is not None:
                             if item['item_id'] == selected_item['item_id']:
                                 block = blocks_data[item['numerical_id']]
                                 max_size = block.get("max_stack_size", 1)
                                 if int(item["quantity"]) < max_size:
-                                    item['quantity'] += selected_item['quantity']
+                                    item['quantity'] += selected_item['quantity'] if button == 1 else 1
 
                                     if item['quantity'] > max_size:
                                         selected_item['quantity'] = item['quantity'] - max_size
                                         item['quantity'] = max_size
-                                        player.inventory[row + 1][column - 1] = item
+                                        player.inventory[row][column - 1] = item
                                     else:
-                                        selected_item = None
+                                        if button == 1:
+                                            selected_item = None
+                                        else:
+                                            selected_item['quantity'] -= 1
+                                            if selected_item["quantity"] <= 0:
+                                                selected_item = None
                             else:
-                                player.inventory[row][column - 1], selected_item = selected_item, \
-                                                                                   player.inventory[row][
-                                                                                       column - 1]
-                                selected_item['x'] = mx
-                                selected_item['y'] = my
+                                if button == 1:
+                                    player.inventory[row][column - 1], selected_item = selected_item, \
+                                                                                       player.inventory[row][
+                                                                                           column - 1]
+                                    selected_item['x'] = mx
+                                    selected_item['y'] = my
                     except IndexError:
                         print('INDEX ERROR')
                 if button == 1 and (
@@ -1198,7 +1320,7 @@ while True:
                                             inventory_crafting_slots[row_index][slot_index] = None
                                         else:
                                             inventory_crafting_slots[row_index][slot_index] = slot
-
+                            session_stats['successful_crafts'] += 1
                             res = check_if_can_craft(True, inventory_crafting_slots, recipes)
                             if res[0]:
                                 craft_result = res[2]
@@ -1255,6 +1377,7 @@ while True:
                                             crafting_table_slots[row_index][slot_index] = None
                                         else:
                                             crafting_table_slots[row_index][slot_index] = slot
+                            session_stats['successful_crafts'] += 1
 
                             res = check_if_can_craft(False, crafting_table_slots, recipes)
                             if res[0]:
@@ -1304,6 +1427,7 @@ while True:
                 if air_timer < 6:
                     vertical_momentum = -8
                     player.jump_start = (player.rect.x // 32, player.rect.y // 32)
+                    session_stats['total_jumps'] += 1
 
             if event.key in [pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7,
                              pygame.K_8, pygame.K_9, ]:
@@ -1361,8 +1485,8 @@ while True:
                     player.rect.x = data["player_coord"][0]
                     player.rect.y = data["player_coord"][1]
 
-            elif event.key == eval(f"pygame.{settings.portal_interact}") and close_to_portal and not can_light_portal[0] \
-                    and screen_status.dimension == 'nether':
+            elif event.key == eval(f"pygame.{settings.portal_interact}") and close_to_portal and \
+                    not can_light_portal[0] and screen_status.dimension == 'nether':
                 seed: int = screen_status.world[1]
 
                 with open("lib/storage/nether_worlds_data.json", "r") as f:

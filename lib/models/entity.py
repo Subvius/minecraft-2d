@@ -1,4 +1,7 @@
+import random
+
 import pygame
+from lib.models.sound import Sound
 
 
 class Entity:
@@ -15,9 +18,10 @@ class Entity:
         self.is_dead: bool = False
         self.images = {
             "idle": [],
-            'run': [],
-            'throw': [],
             'walk': [],
+            'hurt': [],
+            'death': [],
+            'attack': [],
         }
         self.image = None
         self.frame: int = 0
@@ -33,6 +37,8 @@ class Entity:
         self.last_update = pygame.time.get_ticks()
         self.attack_delay = attack_delay
         self.last_attack = self.last_update
+        self.last_sun_damage = pygame.time.get_ticks()
+        self.sun_damage_delay = 600
 
         # self.update_image()
 
@@ -41,11 +47,19 @@ class Entity:
         if self.hp > self.max_hp:
             self.hp = self.max_hp
 
-    def damage(self, damage):
+    def damage(self, damage, sounds: Sound) -> bool:
         self.hp -= damage
-        if self.hp < 0:
+        if self.hp <= 0:
             self.is_dead = True
+            if self.mob_type == 'cave_monster':
+                sounds.play_sound(f"zombie_death")
             self.hp = 0
+        else:
+            self.condition = 'hurt'
+            self.frame = 0
+            if self.mob_type == 'cave_monster':
+                sounds.play_sound(f"zombie_hurt{random.randint(1, 2)}")
+        return self.is_dead
 
     def cut_sheet(self, sheet, columns, rows, animation_type, frame_width, step):
         for j in range(rows):

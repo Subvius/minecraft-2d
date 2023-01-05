@@ -29,6 +29,16 @@
     "diggable": 1,
     "material": "rock"
   },
+  "4": {
+    "item_id": "cobblestone",
+    "image_root": "cobblestone.png",
+    "numerical_id": "4",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 2.0,
+    "diggable": 1,
+    "material": "rock"
+  },
   "56": {
     "item_id": "diamond_ore",
     "image_root": "diamond_ore.jpeg",
@@ -251,6 +261,13 @@
     "stackable": 1,
     "max_stack_size": 64
   },
+  "998": {
+    "item_id": "exp_orb",
+    "image_root": "icons/exp_orb.webp",
+    "numerical_id": "998",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
   "999": {
     "item_id": "bundle",
     "image_root": "items/bundle.png",
@@ -291,7 +308,8 @@
     "image_root": "tools/wooden_sword.png",
     "numerical_id": "268",
     "stackable": 0,
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "damage": 4
   },
   "269": {
     "item_id": "wooden_shovel",
@@ -299,7 +317,8 @@
     "numerical_id": "269",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "dirt"
+    "best_for": "dirt",
+    "damage": 2
   },
   "270": {
     "item_id": "wooden_pickaxe",
@@ -307,7 +326,8 @@
     "numerical_id": "270",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "rock"
+    "best_for": "rock",
+    "damage": 2
   },
   "271": {
     "item_id": "wooden_axe",
@@ -315,14 +335,16 @@
     "numerical_id": "271",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "wood"
+    "best_for": "wood",
+    "damage": 7
   },
   "290": {
     "item_id": "wooden_hoe",
     "image_root": "tools/wooden_hoe.png",
     "numerical_id": "290",
     "stackable": 0,
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "damage": 1
   },
   "275": {
     "item_id": "stone_axe",
@@ -330,7 +352,8 @@
     "numerical_id": "275",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "wood"
+    "best_for": "wood",
+    "damage": 9
   },
   "273": {
     "item_id": "stone_shovel",
@@ -338,7 +361,8 @@
     "numerical_id": "273",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "dirt"
+    "best_for": "dirt",
+    "damage": 3
   },
   "274": {
     "item_id": "stone_pickaxe",
@@ -346,21 +370,24 @@
     "numerical_id": "274",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "rock"
+    "best_for": "rock",
+    "damage": 3
   },
   "272": {
     "item_id": "stone_sword",
     "image_root": "tools/stone_sword.png",
     "numerical_id": "272",
     "stackable": 0,
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "damage": 5
   },
   "291": {
     "item_id": "stone_hoe",
     "image_root": "tools/stone_hoe.png",
     "numerical_id": "291",
     "stackable": 0,
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "damage": 1
   },
   "258": {
     "item_id": "iron_axe",
@@ -368,7 +395,8 @@
     "numerical_id": "258",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "wood"
+    "best_for": "wood",
+    "damage": 9
   },
   "256": {
     "item_id": "iron_shovel",
@@ -376,7 +404,8 @@
     "numerical_id": "256",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "dirt"
+    "best_for": "dirt",
+    "damage": 4
   },
   "257": {
     "item_id": "iron_pickaxe",
@@ -384,21 +413,24 @@
     "numerical_id": "257",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "rock"
+    "best_for": "rock",
+    "damage": 4
   },
   "267": {
     "item_id": "iron_sword",
     "image_root": "tools/iron_sword.png",
     "numerical_id": "267",
     "stackable": 0,
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "damage": 6
   },
   "292": {
     "item_id": "iron_hoe",
     "image_root": "tools/iron_hoe.png",
     "numerical_id": "292",
     "stackable": 0,
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "damage": 1
   },
   "286": {
     "item_id": "golden_axe",
@@ -406,7 +438,8 @@
     "numerical_id": "286",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "wood"
+    "best_for": "wood",
+    "damage": 7
   },
   "284": {
     "item_id": "golden_shovel",
@@ -414,7 +447,8 @@
     "numerical_id": "284",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "dirt"
+    "best_for": "dirt",
+    "damage": 2
   },
   "285": {
     "item_id": "golden_pickaxe",
@@ -422,21 +456,24 @@
     "numerical_id": "285",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "rock"
+    "best_for": "rock",
+    "damage": 2
   },
   "283": {
     "item_id": "golden_sword",
     "image_root": "tools/golden_sword.png",
     "numerical_id": "283",
     "stackable": 0,
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "damage": 4
   },
   "294": {
     "item_id": "golden_hoe",
     "image_root": "tools/golden_hoe.png",
     "numerical_id": "294",
     "stackable": 0,
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "damage": 1
   },
   "279": {
     "item_id": "diamond_axe",
@@ -444,7 +481,8 @@
     "numerical_id": "279",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "wood"
+    "best_for": "wood",
+    "damage": 9
   },
   "277": {
     "item_id": "diamond_shovel",
@@ -452,7 +490,8 @@
     "numerical_id": "277",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "dirt"
+    "best_for": "dirt",
+    "damage": 5
   },
   "278": {
     "item_id": "diamond_pickaxe",
@@ -460,20 +499,23 @@
     "numerical_id": "278",
     "stackable": 0,
     "max_stack_size": 1,
-    "best_for": "rock"
+    "best_for": "rock",
+    "damage": 5
   },
   "276": {
     "item_id": "diamond_sword",
     "image_root": "tools/diamond_sword.png",
     "numerical_id": "276",
     "stackable": 0,
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "damage": 7
   },
   "293": {
     "item_id": "diamond_hoe",
     "image_root": "tools/diamond_hoe.png",
     "numerical_id": "293",
     "stackable": 0,
-    "max_stack_size": 1
+    "max_stack_size": 1,
+    "damage": 1
   }
 }
