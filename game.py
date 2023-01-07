@@ -3,8 +3,10 @@ import sqlite3
 
 import sys
 
+import pygame
 from pygame.locals import *
 
+from lib.func.draw_text import draw_text
 from lib.func.load_images import load_images
 from lib.func.map import *
 from lib.models.player import Player
@@ -167,6 +169,15 @@ music_and_sounds_buttons = [
            x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", uniq_id=1),
     Button(label="Done", width=200, height=25, background_color="gray", text_color="white",
            x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 45, hover_color="lightgray", uniq_id=2),
+]
+
+death_screen_buttons = [
+    Button(label="Главное меню", width=200, height=25, background_color="gray", text_color="white",
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 + 15, hover_color="lightgray", uniq_id=1),
+    Button(label="Возродиться", width=200, height=25, background_color="gray", text_color="white",
+           x=WINDOW_SIZE[0] // 2 - 100, y=WINDOW_SIZE[1] // 2 - 15, hover_color="lightgray", uniq_id=0
+           )
+
 ]
 
 controls_buttons = set_controls_buttons(settings, WINDOW_SIZE)
@@ -594,17 +605,30 @@ while True:
                 screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]):
             screen.blit(pygame.transform.scale(images[selected_item['item_id']], (24, 24)),
                         (selected_item["x"], selected_item["y"]))
-            text_surface = inventory_font.render(f"{selected_item['quantity']}", False,
-                                                 "white")
+            draw_text(screen, inventory_font, f"{selected_item['quantity']}", "white",
+                      (selected_item['x'] + 10, selected_item['y'] + 10), False)
 
-            screen.blit(text_surface, (selected_item['x'] + 10, selected_item['y'] + 10))
-
-        if screen_status.paused and (
+        if screen_status.paused and not player.is_dead and (
                 not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
             draw_rect_alpha(screen, (0, 0, 0, 127,), (0, 0, WINDOW_SIZE[0], WINDOW_SIZE[1]))
 
             for button in game_menu_buttons:
                 button.render(screen, main_screen_font)
+        elif player.is_dead:
+            moving_left = moving_right = False
+            if (
+                    screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]):
+                screen_status.toggle_inventory()
+            screen_status.paused = True
+            draw_rect_alpha(screen, (75, 0, 0, 127,), (0, 0, WINDOW_SIZE[0], WINDOW_SIZE[1]))
+
+            draw_text(screen, create_world_font, "Вы умерли!", "white", (WINDOW_SIZE[0] // 2 - 75, 150), True)
+            draw_text(screen, main_screen_font, "Счёт: ", "white", (WINDOW_SIZE[0] // 2 - 50, 200), True)
+            draw_text(screen, main_screen_font, f"{player.exp}", "yellow", (WINDOW_SIZE[0] // 2, 200), True)
+
+            for button in death_screen_buttons:
+                button.render(screen, main_screen_font)
+
     elif screen_status.screen == 'settings':
         pygame.display.set_caption("Minecraft 2D - Options")
         screen.blit(images['world_select_bg'], (0, 0))
@@ -641,11 +665,9 @@ while True:
                 element[i] = word
 
             y = 30 * index
-            title = main_screen_font.render(" ".join(element), False, "white")
-            screen.blit(title, (WINDOW_SIZE[0] // 2 + 75 - 250, 100 - 15 + y))
-
-            desc = main_screen_font.render(f"{value}", False, "white")
-            screen.blit(desc, (WINDOW_SIZE[0] // 2 + 75, 100 - 15 + y))
+            draw_text(screen, main_screen_font, " ".join(element), "white",
+                      (WINDOW_SIZE[0] // 2 + 75 - 250, 100 - 15 + y), False)
+            draw_text(screen, main_screen_font, f"{value}", "white", (WINDOW_SIZE[0] // 2 + 75, 100 - 15 + y), False)
     elif screen_status.screen == 'controls':
         pygame.display.set_caption("Minecraft 2D - Controls Options")
         screen.blit(images['world_select_bg'], (0, 0))
@@ -662,8 +684,8 @@ while True:
                 element[i] = word
 
             y = 30 * index
-            title = main_screen_font.render(" ".join(element), False, "white")
-            screen.blit(title, (WINDOW_SIZE[0] // 2 + 75 - 250, 100 - 15 + y))
+            draw_text(screen, main_screen_font, " ".join(element), "white",
+                      (WINDOW_SIZE[0] // 2 + 75 - 250, 100 - 15 + y), False)
     elif screen_status.screen == 'main':
         pygame.display.set_caption("Minecraft 2D")
         screen.blit(images['main_screen_bg'], (0, 0))
@@ -712,6 +734,8 @@ while True:
                     screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]):
                 screen_status.toggle_inventory()
                 screen_status.toggle_pause()
+                text_field_focused = False
+                text_field_text = ""
             elif not screen_status.paused:
                 screen_status.toggle_pause()
         if event.type == pygame.KEYDOWN and screen_status.screen == 'create_world' and text_field_focused:
@@ -742,11 +766,12 @@ while True:
             elif screen_status.screen == 'statistics':
                 for button in stats_buttons:
                     button.on_mouse_motion(*event.pos)
-
             elif screen_status.screen == 'controls':
                 for button in controls_buttons:
                     button.on_mouse_motion(*event.pos)
-
+            elif screen_status.screen == 'game' and player.is_dead:
+                for button in death_screen_buttons:
+                    button.on_mouse_motion(*event.pos)
             elif screen_status.screen == 'game' and screen_status.paused and (
                     not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
                 for button in game_menu_buttons:
@@ -798,6 +823,7 @@ while True:
                     player.exp = data.get("player_exp", 0)
                     player.level = math.floor(player.get_level_from_exp())
                     player.hp = data.get("player_hp", player.max_hp)
+                    player.is_dead = data.get("player_is_dead", False)
                     if dimension == 'overworld':
                         coords = data["player_coord"]
 
@@ -894,7 +920,7 @@ while True:
                 text_field_focused = True
             else:
                 text_field_focused = False
-        elif event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'game' and screen_status.paused and (
+        elif event.type == pygame.MOUSEBUTTONDOWN and not player.is_dead and screen_status.screen == 'game' and screen_status.paused and (
                 not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
             btn = None
             for button in game_menu_buttons:
@@ -933,7 +959,28 @@ while True:
                         screen_status.change_scene('game')
                     else:
                         screen_status.change_scene("main")
-        if event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'statistics':
+
+        elif event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'game' and player.is_dead:
+            btn = None
+            for button in death_screen_buttons:
+                res = button.on_mouse_click(*event.pos)
+                if res:
+                    btn = button
+                    break
+            if btn is not None:
+                if btn.id == 0:
+                    player.is_dead = False
+                    player.heal(20)
+                    player.change_condition("idle")
+
+                    player.rect.x = 1000 * 32 // 2
+                    player.rect.y = 60 * 32
+                elif btn.id == 1:
+                    save(game_map, player, screen_status, cursor, con, session_stats)
+                    screen_status.change_scene("world_select")
+                    worlds, worlds_rect = get_worlds(cursor, WINDOW_SIZE)
+                    screen_status.set_world(None)
+        elif event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'statistics':
             btn = None
             for button in stats_buttons:
                 res = button.on_mouse_click(*event.pos)
@@ -1015,16 +1062,16 @@ while True:
                         controls_buttons = set_controls_buttons(settings, WINDOW_SIZE)
 
         if event.type == pygame.MOUSEMOTION and not screen_status.paused \
-                and screen_status.screen == 'game':
+                and screen_status.screen == 'game' and not player.is_dead:
             coord = event.pos
             screen_status.set_mouse_pos(coord)
 
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == settings.use_item and not screen_status.paused \
+        if event.type == pygame.MOUSEBUTTONDOWN and not player.is_dead and event.button == settings.use_item and not screen_status.paused \
                 and screen_status.screen == 'game' and (
                 not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
             map_objects, game_map = on_right_click(event, player.rect, map_objects, scroll, game_map, player,
                                                    screen_status, session_stats)
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == settings.attack and not screen_status.paused \
+        if event.type == pygame.MOUSEBUTTONDOWN and not player.is_dead and event.button == settings.attack and not screen_status.paused \
                 and screen_status.screen == 'game':
             holding_left_button = True
             hold_start = datetime.datetime.now()
@@ -1040,7 +1087,8 @@ while True:
             holding_left_button = False
             hold_end = datetime.datetime.now()
 
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button in [1, 3] and screen_status.screen == "game" \
+        if event.type == pygame.MOUSEBUTTONDOWN and not player.is_dead and event.button in [1,
+                                                                                            3] and screen_status.screen == "game" \
                 and (screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]):
             window_width = (288 - 50) * 1.25
             window_height = (256 - 30) * 1.25
@@ -1152,12 +1200,14 @@ while True:
                     column = int(mx - left + 15) // size - 1
                     row = int((my - top - 52) // size)
                     if player.creative_inventory_page == 'search':
-                        blocks_to_show: dict = blocks_data
                         text = screen_status.creative_inventory_text_field_text
+                        blocks_to_show: dict = {}
                         if text != "":
-                            for block in blocks_to_show:
-                                if blocks_data[block]['item_id'][0:len(text)] != text:
-                                    blocks_to_show.pop(block)
+                            for block in blocks_data:
+                                if blocks_data[block]['item_id'].__contains__(text):
+                                    blocks_to_show.update({block: blocks_data[block]})
+                        else:
+                            blocks_to_show = blocks_data
 
                         index = row * 9 + column + screen_status.creative_inventory_scroll * 9
                         if index < len(list(blocks_to_show.keys())) and selected_item is None:
@@ -1384,8 +1434,20 @@ while True:
                                 craft_result = res[2]
                             else:
                                 craft_result = None
+                elif button == 1 and player.game_mode == 'creative' and screen_status.show_inventory and \
+                        player.creative_inventory_page == 'search':
+                    x = left + 14 + 30 * 4
+                    y = top + 14
+                    box_width = 30 * 5 + 2
+                    box_height = 24
 
-        if event.type == pygame.MOUSEMOTION and screen_status.screen == "game" and (
+                    search_rect = pygame.Rect(x, y, box_width, box_height)
+                    if search_rect.collidepoint(mx, my):
+                        text_field_focused = True
+                    else:
+                        text_field_focused = False
+
+        if event.type == pygame.MOUSEMOTION and not player.is_dead and screen_status.screen == "game" and (
                 screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]) \
                 and selected_item is not None:
             rel = event.pos
@@ -1400,7 +1462,7 @@ while True:
                 player.game_mode == 'creative':
             screen_status.update_creative_scroll(-event.y, blocks_data)
 
-        if event.type == KEYDOWN and screen_status.screen == 'game':
+        if event.type == KEYDOWN and not player.is_dead and screen_status.screen == 'game' and not text_field_focused:
             if event.key == eval(f"pygame.{settings.inventory}"):
                 screen_status.toggle_inventory()
                 moving_left = moving_right = False
@@ -1415,8 +1477,8 @@ while True:
                     screen_status.toggle_inventory()
                     moving_left = moving_right = False
                     craft_result = None
-        if event.type == KEYDOWN and not screen_status.paused \
-                and screen_status.screen == 'game':
+        if event.type == KEYDOWN and not player.is_dead and not screen_status.paused \
+                and screen_status.screen == 'game' and not text_field_focused:
             if event.key == K_RIGHT or event.key == eval(f"pygame.{settings.move_right}"):
                 moving_right = True
             if event.key == eval(f"pygame.{settings.toggle_creative_mode}"):
@@ -1521,6 +1583,16 @@ while True:
                     player.remove_from_inventory(player.selected_inventory_slot, 1)
                     player.change_condition('throw')
                     player.frame = 0
+        if event.type == KEYDOWN and not player.is_dead and screen_status.screen == 'game' and text_field_focused:
+            text = screen_status.creative_inventory_text_field_text
+            if event.key == pygame.K_BACKSPACE:
+                text = text[:-1]
+            else:
+                if len(text) < 16:
+                    text += event.unicode
+                    print(text)
+
+            screen_status.update_creative_text(text)
 
         if event.type == KEYUP and not screen_status.paused \
                 and screen_status.screen == 'game':

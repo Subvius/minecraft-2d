@@ -39,7 +39,8 @@ class Player:
                 self.images[animation_type].append(image)
 
     def change_game_mode(self, game_mode: str = "survival"):
-        self.game_mode = game_mode
+        if not self.is_dead:
+            self.game_mode = game_mode
 
     def update_image(self):
         self.frame = (self.frame + 1) % len(self.images[self.condition])
@@ -52,33 +53,38 @@ class Player:
         screen.blit(self.image, (x, y))
 
     def remove_from_inventory(self, slot: int, quantity: int, row: int = 0):
-        self.inventory[row][slot]["quantity"] -= quantity
-        if self.inventory[row][slot]["quantity"] <= 0:
-            self.inventory[row][slot] = None
+        if not self.is_dead:
+            self.inventory[row][slot]["quantity"] -= quantity
+            if self.inventory[row][slot]["quantity"] <= 0:
+                self.inventory[row][slot] = None
 
     def set_selected_slot(self, slot: int):
-        self.selected_inventory_slot = slot
-        if not 0 <= self.selected_inventory_slot <= 8:
-            self.selected_inventory_slot = 8 if self.selected_inventory_slot < 0 else 0
+        if not self.is_dead:
+            self.selected_inventory_slot = slot
+            if not 0 <= self.selected_inventory_slot <= 8:
+                self.selected_inventory_slot = 8 if self.selected_inventory_slot < 0 else 0
 
     def can_pick_up(self, game_map: list):
-        block = game_map[self.rect.y // 32 + 1][self.rect.x // 32]
-        rect = pygame.Rect(self.rect.x, self.rect.y, 32, 64)
-        if block.count(":") and rect.colliderect(self.rect):
-            return True, block
+        if not self.is_dead:
+            block = game_map[self.rect.y // 32 + 1][self.rect.x // 32]
+            rect = pygame.Rect(self.rect.x, self.rect.y, 32, 64)
+            if block.count(":") and rect.colliderect(self.rect):
+                return True, block
         return False, None
 
     def heal(self, hp: int = 1):
-        self.hp += hp
-        if self.hp > self.max_hp:
-            self.hp = self.max_hp
+        if not self.is_dead:
+            self.hp += hp
+            if self.hp > self.max_hp:
+                self.hp = self.max_hp
 
     def damage(self, damage: int = 0):
-        self.hp -= damage
+        if self.game_mode == 'survival':
+            self.hp -= damage
 
-        if self.hp <= 0:
-            self.is_dead = True
-            self.hp = 0
+            if self.hp <= 0:
+                self.is_dead = True
+                self.hp = 0
 
     def add_exp(self, exp, sounds: Sound, ):
         self.exp += exp
@@ -114,6 +120,8 @@ class Player:
         return self.get_experience_from_level(next_level) - exp
 
     def get_angle_for_display(self, mouse_x, mouse_y, scroll) -> float:
-        rel_x, rel_y = mouse_x - (self.rect.x - scroll[0]), mouse_y - (self.rect.y - scroll[1])
-        angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
-        return angle
+        if not self.is_dead:
+            rel_x, rel_y = mouse_x - (self.rect.x - scroll[0]), mouse_y - (self.rect.y - scroll[1])
+            angle = (180 / math.pi) * -math.atan2(rel_y, rel_x)
+            return angle
+        return 1.0

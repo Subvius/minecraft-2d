@@ -3,6 +3,7 @@ import math
 import noise
 import lib.models.screen
 from lib.func.blocks import *
+from lib.func.draw_text import draw_text
 from lib.models.entity import *
 
 
@@ -751,11 +752,13 @@ def draw_creative_inventory(screen, inventory, width, height, font, images, bloc
         draw_shadows(*(left + x, top + y), *(left + x + pl_width, top + y), screen, "black")
         draw_shadows(*(left + x, top + y), *(left + x, top + y + pl_height), screen, "black")
     elif page == "search":
-        blocks_to_show: dict = blocks_data
+        blocks_to_show: dict = {}
         if text_field_text != "":
-            for block in blocks_to_show:
-                if blocks_data[block]['item_id'][0:len(text_field_text)] != text_field_text:
-                    blocks_to_show.pop(block)
+            for block in blocks_data:
+                if blocks_data[block]['item_id'].__contains__(text_field_text):
+                    blocks_to_show.update({block: blocks_data[block]})
+        else:
+            blocks_to_show = blocks_data
         text_surface = text_font.render(f"Search Items", False,
                                         tile_color)
 
@@ -767,6 +770,8 @@ def draw_creative_inventory(screen, inventory, width, height, font, images, bloc
 
         search_rect = pygame.Rect(x, y, box_width, box_height)
         pygame.draw.rect(screen, tile_color, search_rect)
+        if text_field_text != "":
+            draw_text(screen, font, text_field_text, "black", (x + 3, y + 1), False)
         draw_shadows(x, y, x + box_width, y, screen, "black")
         draw_shadows(x, y, x, y + box_height, screen, "black")
         draw_shadows(x + box_width, y + box_height, x + box_width, y, screen)

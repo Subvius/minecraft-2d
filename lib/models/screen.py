@@ -42,6 +42,7 @@ class Screen:
             except KeyError:
                 print('INVALID INVENTORY NAME -' + inventory)
         self.toggle_pause()
+        self.update_creative_text("")
 
     def change_dimension(self, dimension):
         self.dimension = dimension

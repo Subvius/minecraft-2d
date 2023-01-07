@@ -18,6 +18,7 @@ def save(game_map: list, player: Player, screen_status: Screen, cursor: sqlite3.
             data_json[str(seed)]["player_hp"] = player.hp
             data_json[str(seed)]["player_exp"] = player.exp
             data_json[str(seed)]['player_coord'] = (player.rect.x, player.rect.y)
+            data_json[str(seed)]['player_is_dead'] = player.is_dead
             data_json[str(seed)]['world_time'] = screen_status.world_time
             data_json[str(seed)]['dimension'] = 'overworld'
 
@@ -38,6 +39,7 @@ def save(game_map: list, player: Player, screen_status: Screen, cursor: sqlite3.
 
             data_json[str(seed)]["player_inventory"] = player.inventory
             data_json[str(seed)]["player_hp"] = player.hp
+            data_json[str(seed)]['player_is_dead'] = player.is_dead
             data_json[str(seed)]['world_time'] = screen_status.world_time
             data_json[str(seed)]["player_exp"] = player.exp
             data_json[str(seed)]['dimension'] = 'nether'
