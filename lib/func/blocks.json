@@ -517,5 +517,19 @@
     "stackable": 0,
     "max_stack_size": 1,
     "damage": 1
+  },
+  "261": {
+    "item_id": "bow",
+    "image_root": "items/charged_bow.png",
+    "numerical_id": "261",
+    "stackable": 0,
+    "max_stack_size": 1
+  },
+  "262": {
+    "item_id": "arrow",
+    "image_root": "items/arrow.png",
+    "numerical_id": "262",
+    "stackable": 1,
+    "max_stack_size": 64
   }
 }

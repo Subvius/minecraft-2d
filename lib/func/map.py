@@ -594,9 +594,51 @@ def draw_handholding_item(screen: pygame.Surface, images: dict, player: Player, 
     x += 15 if player.moving_direction == 'right' else -12
     y = player.rect.y - scroll[1] + 32
 
-    angle = player.get_angle_for_display(mx, my, scroll)
+    angle = player.get_angle_for_display(mx, my, scroll) - 15
 
     screen.blit(pygame.transform.rotate(pygame.transform.scale(image, (24, 24)).convert_alpha(), angle), (x, y))
+
+
+def draw_trajectory(screen, x0, y0, x, y, width):
+    max_distance = width // 3.75
+    if x0 < max_distance + 50:
+        x0 = max_distance + 50
+    elif x0 > width - max_distance:
+        x0 = width - max_distance
+    mouse_pos = (math.floor(x0), y0)
+    x0, y0 = mouse_pos
+    pygame.draw.line(screen, "white", (x, y), (x0, y0))
+    x1, y1 = x0 + abs(x0 - x) if x0 > x else x0 - abs(x0 - x), y0 + abs(y0 - y)
+    pygame.draw.line(screen, "white", (x0, y0), (x1, y1))
+
+
+def draw_dashed_line(surf, color, p1, p2, prev_line_len, dash_length=8):
+    dx, dy = p2[0] - p1[0], p2[1] - p1[1]
+    if dx == 0 and dy == 0:
+        return
+    dist = math.hypot(dx, dy)
+    dx /= dist
+    dy /= dist
+
+    step = dash_length * 2
+    start = (int(prev_line_len) // step) * step
+    end = (int(prev_line_len + dist) // step + 1) * step
+    for i in range(start, end, dash_length * 2):
+        s = max(0, start - prev_line_len)
+        e = min(start - prev_line_len + dash_length, dist)
+        if s < e:
+            ps = p1[0] + dx * s, p1[1] + dy * s
+            pe = p1[0] + dx * e, p1[1] + dy * e
+            pygame.draw.line(surf, color, pe, ps)
+
+
+def draw_dashed_lines(surf, color, points, dash_length=8):
+    line_len = 0
+    for i in range(1, len(points)):
+        p1, p2 = points[i - 1], points[i]
+        dist = math.hypot(p2[0] - p1[0], p2[1] - p1[1])
+        draw_dashed_line(surf, color, p1, p2, line_len, dash_length)
+        line_len += dist
 
 
 def draw_rect_alpha(surface, color, rect):
@@ -854,7 +896,7 @@ def draw_sun(screen: pygame.Surface, screen_status: lib.models.screen.Screen, ic
 
     pos = (width // 100 * day_night_cycle_percent, (
             Y_MAX - Y_MAX // 100 * day_night_cycle_percent) if day_night_cycle_percent <= 50 else (
-                Y_MIN + Y_MAX // 100 * (day_night_cycle_percent - 50)))
+            Y_MIN + Y_MAX // 100 * (day_night_cycle_percent - 50)))
     screen.blit(pygame.transform.scale(image, (64, 64)), pos)
 
 

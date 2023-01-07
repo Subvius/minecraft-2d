@@ -1,1 +1,1 @@
-{"music": false, "blocks": false, "move_left": "K_a", "move_right": "K_d", "jump": "K_SPACE", "inventory": "K_e", "drop": "K_q", "toggle_creative_mode": "K_c", "portal_interact": "K_f", "use_item": 3, "attack": 1}
+{"music": false, "blocks": true, "move_left": "K_a", "move_right": "K_d", "jump": "K_SPACE", "inventory": "K_e", "drop": "K_q", "toggle_creative_mode": "K_c", "portal_interact": "K_f", "use_item": 3, "attack": 1}

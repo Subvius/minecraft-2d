@@ -9,6 +9,7 @@ from pygame.locals import *
 from lib.func.draw_text import draw_text
 from lib.func.load_images import load_images
 from lib.func.map import *
+from lib.models.arrow import Arrow, get_trajectory
 from lib.models.player import Player
 from lib.models.screen import *
 from lib.models.buttons import Button, set_controls_buttons
@@ -81,6 +82,8 @@ map_objects = []
 scroll = [0, 0]
 
 falling_items = []
+arrows: list[Arrow] = list()
+
 close_to_portal = False
 can_light_portal = [False, []]
 
@@ -223,6 +226,8 @@ while True:
                     display.fill((120, 167, 255))
             else:
                 display.fill((39, 33, 78))
+            draw_sun(display, screen_status, icons)
+
         elif screen_status.dimension == 'nether':
             display.fill((88, 30, 65))
 
@@ -320,8 +325,8 @@ while True:
                         )
                         image.set_colorkey((0, 0, 0), RLEACCEL)
                         display.blit(image, (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1]))
-
-                    map_objects.append(pygame.Rect(tile_x * 32, tile_y * 32, 32, 32))
+                    if block_id != "58":
+                        map_objects.append(pygame.Rect(tile_x * 32, tile_y * 32, 32, 32))
                 x += 1
             y += 1
 
@@ -509,6 +514,12 @@ while True:
         mobs = draw_mobs(display, player, mobs, possible_x, possible_y, scroll, map_objects, game_map, mob_images,
                          screen_status.paused, inventory_font, icons, screen_status, sounds)
 
+        item = player.inventory[0][player.selected_inventory_slot]
+        if holding_left_button and item is not None and item['item_id'] == 'bow':
+            center = player.rect.center
+            x, y = (center[0] - scroll[0], center[1] - scroll[1])
+            draw_trajectory(display, *screen_status.mouse_pos, x, y, width)
+
         display.blit(
             pygame.transform.scale(pygame.transform.flip(player.image, player.moving_direction == "left", False),
                                    (32, 64)),
@@ -584,9 +595,6 @@ while True:
         if player.game_mode == 'survival':
             draw_health_bar(screen, player, width, height, icons)
             draw_exp_bar(screen, player, icons, main_screen_font)
-
-        if screen_status.dimension == "overworld":
-            draw_sun(screen, screen_status, icons)
 
         if screen_status.show_inventory and player.game_mode == 'survival':
             draw_expanded_inventory(screen, player.inventory, width, height, inventory_font,
