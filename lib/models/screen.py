@@ -13,6 +13,7 @@ class Screen:
         self.world_time = 0
         self.creative_inventory_scroll = 0
         self.creative_inventory_text_field_text = ""
+        self.charges = list()
 
     def change_scene(self, screen: str):
         """Changes screen to another. Can't be same as current"""
@@ -25,6 +26,22 @@ class Screen:
 
     def set_world(self, world):
         self.world = world
+
+    def add_charge(self, charge):
+        self.charges.append(charge)
+
+    def remove_charges(self, ids: list[int]):
+        try:
+            for i in ids[::-1]:
+                self.charges.pop(i)
+        except IndexError:
+            print('INVALID INDEX')
+
+    def update_charge(self, index: int, new_value):
+        try:
+            self.charges[index] = new_value
+        except IndexError:
+            print('INVALID INDEX')
 
     def toggle_inventory(self, inventory=None):
         if inventory is None:

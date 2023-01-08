@@ -518,6 +518,15 @@
     "max_stack_size": 1,
     "damage": 1
   },
+  "1000": {
+    "item_id": "water_wand",
+    "image_root": "items/water_wand.png",
+    "numerical_id": "1000",
+    "stackable": 0,
+    "max_stack_size": 1,
+    "charge_damage": 4,
+    "damage": 1
+  },
   "261": {
     "item_id": "bow",
     "image_root": "items/charged_bow.png",

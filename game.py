@@ -6,10 +6,9 @@ import sys
 import pygame
 from pygame.locals import *
 
-from lib.func.draw_text import draw_text
 from lib.func.load_images import load_images
 from lib.func.map import *
-from lib.models.arrow import Arrow, get_trajectory
+from lib.models.arrow import Arrow
 from lib.models.player import Player
 from lib.models.screen import *
 from lib.models.buttons import Button, set_controls_buttons
@@ -19,6 +18,7 @@ from lib.models.settings import Settings
 from lib.func.crafts import *
 from lib.func.save_world import save
 from lib.func.start import get_worlds
+from lib.models.wand_charge import Charge
 
 clock = pygame.time.Clock()
 
@@ -540,6 +540,29 @@ while True:
 
         screen.blit(pygame.transform.scale(display, WINDOW_SIZE), (0, 0))
 
+        to_remove = []
+        for index in range(len(screen_status.charges)):
+            charge = screen_status.charges[index]
+            arrived_dest = charge.move()
+            if arrived_dest:
+                to_remove.append(index)
+            visible_rect = pygame.Rect(charge.rect.x + scroll[0], charge.rect.y + scroll[1],
+                                       charge.rect.width,
+                                       charge.rect.height)
+            hit_list = collision_test(visible_rect, map_objects)
+            if len(hit_list):
+                if to_remove.count(index) == 0:
+                    to_remove.append(index)
+            for mob in mobs:
+                if visible_rect.colliderect(mob.rect):
+                    if to_remove.count(index) == 0:
+                        to_remove.append(index)
+
+                    mob.damage(charge.damage, sounds)
+            charge.render(screen)
+
+        screen_status.remove_charges(to_remove)
+
         if game_map[player.rect.y // 32][player.rect.x // 32 - 1] == "49":
             start_x = player.rect.x // 32 - 1
             start_y = player.rect.y // 32 - 3
@@ -928,7 +951,8 @@ while True:
                 text_field_focused = True
             else:
                 text_field_focused = False
-        elif event.type == pygame.MOUSEBUTTONDOWN and not player.is_dead and screen_status.screen == 'game' and screen_status.paused and (
+        elif event.type == pygame.MOUSEBUTTONDOWN and not player.is_dead and screen_status.screen == 'game' and \
+                screen_status.paused and (
                 not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
             btn = None
             for button in game_menu_buttons:
@@ -1074,12 +1098,23 @@ while True:
             coord = event.pos
             screen_status.set_mouse_pos(coord)
 
-        if event.type == pygame.MOUSEBUTTONDOWN and not player.is_dead and event.button == settings.use_item and not screen_status.paused \
+        if event.type == pygame.MOUSEBUTTONDOWN and not player.is_dead and event.button == settings.use_item and \
+                not screen_status.paused \
                 and screen_status.screen == 'game' and (
                 not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
+
             map_objects, game_map = on_right_click(event, player.rect, map_objects, scroll, game_map, player,
                                                    screen_status, session_stats)
-        if event.type == pygame.MOUSEBUTTONDOWN and not player.is_dead and event.button == settings.attack and not screen_status.paused \
+
+            item = player.inventory[0][player.selected_inventory_slot]
+            if item is not None and item['item_id'].count("wand") > 0:
+                data = blocks_data[item["numerical_id"]]
+                x0, y0 = (player.rect.midleft[0] - scroll[0], player.rect.midleft[1] - scroll[1])
+                charge = Charge(item['item_id'], "charge", (x0, y0), event.pos, 3, data.get('charge_damage', 1), width,
+                                height)
+                screen_status.add_charge(charge)
+        if event.type == pygame.MOUSEBUTTONDOWN and not player.is_dead and event.button == settings.attack and \
+                not screen_status.paused \
                 and screen_status.screen == 'game':
             holding_left_button = True
             hold_start = datetime.datetime.now()
@@ -1090,13 +1125,15 @@ while True:
                                                                              hold_start,
                                                                              blocks_data, falling_items, mobs, True,
                                                                              sounds, session_stats)
+
         if event.type == pygame.MOUSEBUTTONUP and event.button == settings.attack and not screen_status.paused \
                 and screen_status.screen == 'game':
             holding_left_button = False
             hold_end = datetime.datetime.now()
 
         if event.type == pygame.MOUSEBUTTONDOWN and not player.is_dead and event.button in [1,
-                                                                                            3] and screen_status.screen == "game" \
+                                                                                            3] and \
+                screen_status.screen == "game" \
                 and (screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]):
             window_width = (288 - 50) * 1.25
             window_height = (256 - 30) * 1.25
