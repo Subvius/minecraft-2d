@@ -20,7 +20,6 @@ for obj in data.get("objects"):
         filename = filename.replace('/', "_")
         os.replace(f"../storage/objects/{folder_name}/{hash_value}", f"../assets/sounds/{filename}")
 
-
 """
 
     if obj.count('step') > 0:

@@ -19,7 +19,7 @@ class Charge:
         self.damage = damage
         self.trajectory_point = 0
         self.width, self.height = width, height
-        self.rect: pygame.Rect = pygame.Rect(self.launch_pos[0], self.launch_pos[1], 24,24)
+        self.rect: pygame.Rect = pygame.Rect(self.launch_pos[0], self.launch_pos[1], 24, 24)
         self.angle = 0
         self.trajectory = self.get_trajectory()
         self.last_update = pygame.time.get_ticks()

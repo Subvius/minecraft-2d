@@ -1,0 +1,5 @@
+noise==1.2.2
+pep8==1.7.1
+pygame==2.1.2
+pyinstaller==5.6.2
+pyinstaller-hooks-contrib==2022.12

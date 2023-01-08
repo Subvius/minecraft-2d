@@ -12,6 +12,7 @@ def load_images(blocks_data: dict):
         images.update({block['item_id']: pygame.image.load(f"lib/assets/{block['image_root']}")})
     images.update({"main_screen_bg": pygame.image.load("lib/assets/main_screen_bg.jpg")})
     images.update({"world_select_bg": pygame.image.load("lib/assets/world_select_bg.jpg")})
+    images.update({"overworld_background": pygame.image.load("lib/assets/overworld_background.png")})
     images.update({"no_textures": pygame.image.load("lib/assets/no_textures.webp")})
 
     for file in os.listdir("lib/assets/items"):

@@ -99,6 +99,8 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
                             num_id = tile
                             if tile == "3":
                                 num_id = "4"
+                            elif tile == '16':
+                                num_id = '263'
                             x += scroll[0]
                             y += scroll[1]
                             x //= 32

@@ -31,15 +31,15 @@ inventory_font = pygame.font.SysFont('Comic Sans MS', 12)
 main_screen_font = pygame.font.SysFont('Comic Sans MS', 16)
 create_world_font = pygame.font.SysFont('Comic Sans MS', 25)
 
-width, height = 1184, 768
-WINDOW_SIZE = (width, height)
+WIDTH, HEIGHT = 1184, 768
+WINDOW_SIZE = (WIDTH, HEIGHT)
 JUMP_HEIGHT = 2
 
 worlds, worlds_rect = get_worlds(cursor, WINDOW_SIZE)
 
 screen = pygame.display.set_mode(WINDOW_SIZE, 0, 32)
 
-display = pygame.Surface((width, height))
+display = pygame.Surface((WIDTH, HEIGHT))
 
 moving_right = False
 moving_left = False
@@ -208,6 +208,7 @@ session_stats = {
 }
 
 mobs = list()
+game_map = list()
 
 while True:
     if screen_status.screen == 'game':
@@ -226,6 +227,9 @@ while True:
                     display.fill((120, 167, 255))
             else:
                 display.fill((39, 33, 78))
+            # display.fill("black")
+            # display.blit(pygame.transform.scale(images['overworld_background'], (width, height)),
+            #              (0, 0 - (scroll[1] - 1370 if player.rect.y // 32 >= 57 or scroll[1] >= 1372 else 0)))
             draw_sun(display, screen_status, icons)
 
         elif screen_status.dimension == 'nether':
@@ -249,16 +253,16 @@ while True:
             player.change_condition('idle')
             player.frame = 0
 
-        true_scroll[0] += (player.rect.x - true_scroll[0] - width // 2 - player.image.get_width() // 2) / 20
-        true_scroll[1] += (player.rect.y - true_scroll[1] - height // 2 - player.image.get_height() // 2) / 20
+        true_scroll[0] += (player.rect.x - true_scroll[0] - WIDTH // 2 - player.image.get_width() // 2) / 20
+        true_scroll[1] += (player.rect.y - true_scroll[1] - HEIGHT // 2 - player.image.get_height() // 2) / 20
         scroll = true_scroll.copy()
 
         scroll[0] = int(scroll[0])
         scroll[1] = int(scroll[1])
 
         map_objects = []
-        possible_x = [num if abs(player_rect.x - num * 32) <= width // 2 + 64 else 0 for num in range(len(game_map[0]))]
-        possible_y = [num if abs(player_rect.y - num * 32) <= width // 2 else 0 for num in range(128)]
+        possible_x = [num if abs(player_rect.x - num * 32) <= WIDTH // 2 + 64 else 0 for num in range(len(game_map[0]))]
+        possible_y = [num if abs(player_rect.y - num * 32) <= WIDTH // 2 else 0 for num in range(128)]
 
         possible_x = list(filter((0).__ne__, possible_x))
         possible_y = list(filter((0).__ne__, possible_y))
@@ -518,7 +522,7 @@ while True:
         if holding_left_button and item is not None and item['item_id'] == 'bow':
             center = player.rect.center
             x, y = (center[0] - scroll[0], center[1] - scroll[1])
-            draw_trajectory(display, *screen_status.mouse_pos, x, y, width)
+            draw_trajectory(display, *screen_status.mouse_pos, x, y, WIDTH)
 
         display.blit(
             pygame.transform.scale(pygame.transform.flip(player.image, player.moving_direction == "left", False),
@@ -613,22 +617,22 @@ while True:
                 can_light_portal = [False]
                 close_to_portal = False
 
-        draw_inventory(screen, player.inventory, width, height, inventory_font, player.selected_inventory_slot, images,
+        draw_inventory(screen, player.inventory, WIDTH, HEIGHT, inventory_font, player.selected_inventory_slot, images,
                        blocks_data)
         if player.game_mode == 'survival':
-            draw_health_bar(screen, player, width, height, icons)
+            draw_health_bar(screen, player, WIDTH, HEIGHT, icons)
             draw_exp_bar(screen, player, icons, main_screen_font)
 
         if screen_status.show_inventory and player.game_mode == 'survival':
-            draw_expanded_inventory(screen, player.inventory, width, height, inventory_font,
+            draw_expanded_inventory(screen, player.inventory, WIDTH, HEIGHT, inventory_font,
                                     images, blocks_data, inventory_crafting_slots, craft_result, player)
         elif screen_status.show_inventory and player.game_mode == 'creative':
-            draw_creative_inventory(screen, player.inventory, width, height, inventory_font,
+            draw_creative_inventory(screen, player.inventory, WIDTH, HEIGHT, inventory_font,
                                     images, blocks_data, player, main_screen_font,
                                     screen_status.creative_inventory_scroll,
                                     screen_status.creative_inventory_text_field_text)
         elif screen_status.inventories.get("crafting_table", False):
-            draw_crafting_table_inventory(screen, player.inventory, width, height, inventory_font,
+            draw_crafting_table_inventory(screen, player.inventory, WIDTH, HEIGHT, inventory_font,
                                           images,
                                           blocks_data, crafting_table_slots, craft_result, main_screen_font)
 
@@ -1110,8 +1114,8 @@ while True:
             if item is not None and item['item_id'].count("wand") > 0:
                 data = blocks_data[item["numerical_id"]]
                 x0, y0 = (player.rect.midleft[0] - scroll[0], player.rect.midleft[1] - scroll[1])
-                charge = Charge(item['item_id'], "charge", (x0, y0), event.pos, 3, data.get('charge_damage', 1), width,
-                                height)
+                charge = Charge(item['item_id'], "charge", (x0, y0), event.pos, 3, data.get('charge_damage', 1), WIDTH,
+                                HEIGHT)
                 screen_status.add_charge(charge)
         if event.type == pygame.MOUSEBUTTONDOWN and not player.is_dead and event.button == settings.attack and \
                 not screen_status.paused \
@@ -1137,12 +1141,12 @@ while True:
                 and (screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]):
             window_width = (288 - 50) * 1.25
             window_height = (256 - 30) * 1.25
-            left = width // 2 - window_width // 2
-            top = height // 2 - window_height // 2
+            left = WIDTH // 2 - window_width // 2
+            top = HEIGHT // 2 - window_height // 2
             mx = event.pos[0]
             my = event.pos[1]
 
-            rect = pygame.Rect(left, top, width, height)
+            rect = pygame.Rect(left, top, WIDTH, HEIGHT)
             mouse_rect = pygame.Rect(mx, my, 1, 1)
             # Пользователь кликнул в инвентарь
             if rect.colliderect(mouse_rect):
@@ -1394,33 +1398,37 @@ while True:
                             11 + 30) + 30 * 1 + 1 * 1 + 15 and screen_status.show_inventory:
                         if craft_result is not None:
                             block = get_block_data_by_name(blocks_data, craft_result['result']['item'])
-                            selected_item = {
-                                "item_id": block['item_id'],
-                                "numerical_id": block['numerical_id'],
-                                "quantity": craft_result['result'].get("count", 1),
-                                'x': mx,
-                                'y': my,
-                                "type": 'block' if block.get("material", None) is not None else "tool" if block.get(
-                                    "best_for", None) is not None else "item",
-                            }
-                            if block.get("best_for", None) is not None:
-                                selected_item.update({"best_for": block.get("best_for", None)})
-                            for row in inventory_crafting_slots:
-                                row_index = inventory_crafting_slots.index(row)
-                                for slot in row:
-                                    slot_index = row.index(slot)
-                                    if slot is not None:
-                                        slot["quantity"] -= 1
-                                        if slot['quantity'] <= 0:
-                                            inventory_crafting_slots[row_index][slot_index] = None
-                                        else:
-                                            inventory_crafting_slots[row_index][slot_index] = slot
-                            session_stats['successful_crafts'] += 1
-                            res = check_if_can_craft(True, inventory_crafting_slots, recipes)
-                            if res[0]:
-                                craft_result = res[2]
-                            else:
-                                craft_result = None
+                            if selected_item is None:
+                                selected_item = {
+                                    "item_id": block['item_id'],
+                                    "numerical_id": block['numerical_id'],
+                                    "quantity": craft_result['result'].get("count", 1),
+                                    'x': mx,
+                                    'y': my,
+                                    "type": 'block' if block.get("material", None) is not None else "tool" if block.get(
+                                        "best_for", None) is not None else "item",
+                                }
+                            elif selected_item is not None and selected_item["item_id"] == block["item_id"]:
+                                selected_item['quantity'] += craft_result['result'].get("count", 1)
+                            if selected_item['item_id'] == block['item_id']:
+                                if block.get("best_for", None) is not None:
+                                    selected_item.update({"best_for": block.get("best_for", None)})
+                                for row in inventory_crafting_slots:
+                                    row_index = inventory_crafting_slots.index(row)
+                                    for slot in row:
+                                        slot_index = row.index(slot)
+                                        if slot is not None:
+                                            slot["quantity"] -= 1
+                                            if slot['quantity'] <= 0:
+                                                inventory_crafting_slots[row_index][slot_index] = None
+                                            else:
+                                                inventory_crafting_slots[row_index][slot_index] = slot
+                                session_stats['successful_crafts'] += 1
+                                res = check_if_can_craft(True, inventory_crafting_slots, recipes)
+                                if res[0]:
+                                    craft_result = res[2]
+                                else:
+                                    craft_result = None
 
                     if 41 <= mx - left <= 41 + 3 * 30 + 1 * 3 and 25 <= my - top <= 25 + 30 * 3 + 1 * 3 \
                             and screen_status.inventories.get("crafting_table", False):
@@ -1451,34 +1459,38 @@ while True:
                             11 + 30) + 30 * 1 + 1 * 1 + 15 and screen_status.inventories.get("crafting_table", False):
                         if craft_result is not None:
                             block = get_block_data_by_name(blocks_data, craft_result['result']['item'])
-                            selected_item = {
-                                "item_id": block['item_id'],
-                                "numerical_id": block['numerical_id'],
-                                "quantity": craft_result['result'].get("count", 1),
-                                'x': mx,
-                                'y': my,
-                                "type": 'block' if block.get("material", None) is not None else "tool" if block.get(
-                                    "best_for", None) is not None else "item",
-                            }
-                            if block.get("best_for", None) is not None:
-                                selected_item.update({"best_for": block.get("best_for", None)})
-                            for row in crafting_table_slots:
-                                row_index = crafting_table_slots.index(row)
-                                for slot in row:
-                                    slot_index = row.index(slot)
-                                    if slot is not None:
-                                        slot["quantity"] -= 1
-                                        if slot['quantity'] <= 0:
-                                            crafting_table_slots[row_index][slot_index] = None
-                                        else:
-                                            crafting_table_slots[row_index][slot_index] = slot
-                            session_stats['successful_crafts'] += 1
+                            if selected_item is None:
+                                selected_item = {
+                                    "item_id": block['item_id'],
+                                    "numerical_id": block['numerical_id'],
+                                    "quantity": craft_result['result'].get("count", 1),
+                                    'x': mx,
+                                    'y': my,
+                                    "type": 'block' if block.get("material", None) is not None else "tool" if block.get(
+                                        "best_for", None) is not None else "item",
+                                }
+                            elif selected_item is not None and selected_item["item_id"] == block["item_id"]:
+                                selected_item['quantity'] += craft_result['result'].get("count", 1)
+                            if selected_item['item_id'] == block['item_id']:
+                                if block.get("best_for", None) is not None:
+                                    selected_item.update({"best_for": block.get("best_for", None)})
+                                for row in crafting_table_slots:
+                                    row_index = crafting_table_slots.index(row)
+                                    for slot in row:
+                                        slot_index = row.index(slot)
+                                        if slot is not None:
+                                            slot["quantity"] -= 1
+                                            if slot['quantity'] <= 0:
+                                                crafting_table_slots[row_index][slot_index] = None
+                                            else:
+                                                crafting_table_slots[row_index][slot_index] = slot
+                                session_stats['successful_crafts'] += 1
 
-                            res = check_if_can_craft(False, crafting_table_slots, recipes)
-                            if res[0]:
-                                craft_result = res[2]
-                            else:
-                                craft_result = None
+                                res = check_if_can_craft(False, crafting_table_slots, recipes)
+                                if res[0]:
+                                    craft_result = res[2]
+                                else:
+                                    craft_result = None
                 elif button == 1 and player.game_mode == 'creative' and screen_status.show_inventory and \
                         player.creative_inventory_page == 'search':
                     x = left + 14 + 30 * 4
