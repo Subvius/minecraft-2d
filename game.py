@@ -616,6 +616,10 @@ while True:
             else:
                 can_light_portal = [False]
                 close_to_portal = False
+        else:
+            if can_light_portal[0] or close_to_portal:
+                can_light_portal = [False]
+                close_to_portal = False
 
         draw_inventory(screen, player.inventory, WIDTH, HEIGHT, inventory_font, player.selected_inventory_slot, images,
                        blocks_data)
