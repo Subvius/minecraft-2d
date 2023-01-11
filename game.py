@@ -331,6 +331,21 @@ while True:
                         display.blit(image, (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1]))
                     if block_id != "58":
                         map_objects.append(pygame.Rect(tile_x * 32, tile_y * 32, 32, 32))
+
+                    if game_map[tile_y - 1][tile_x] != "0" and tile_y < 67 and \
+                            game_map[tile_y - 2][tile_x] != "0" and block_id not in ["49", "58", "90", "324", "18",
+                                                                                     "17"]:
+                        draw_rect_alpha(display, (0, 0, 0, 128),
+                                        (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1], 32, 32))
+                    if game_map[tile_y - 1][tile_x] != "0" and tile_y < 67 and \
+                            game_map[tile_y - 2][tile_x] != "0" and game_map[tile_y - 3][
+                        tile_x] != "0" and block_id not in ["49", "58", "90", "324", "18",
+                                                            "17"]:
+                        draw_rect_alpha(display, (0, 0, 0, 10),
+                                        (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1], 32, 32))
+                        # pygame.draw.rect(display, "black",
+                        #                  pygame.Rect(tile_x * 32 - scroll[0], tile_y * 32 - scroll[1], 32, 32))
+
                 x += 1
             y += 1
 

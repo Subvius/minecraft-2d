@@ -1,6 +1,8 @@
 import datetime
 import math
 import noise
+import pygame
+
 import lib.models.screen
 from lib.func.blocks import *
 from lib.func.draw_text import draw_text
@@ -674,11 +676,11 @@ def draw_exp_bar(screen, player, icons, font):
         pygame.transform.scale(cut_progress_bar(full_bar_image, percent),
                                (32 * 9 * percent, empty_bar_image.get_height() + 5)),
         (x, y))
-    level_surf = font.render(f"{player.level}", 1, (0, 0, 0))
-    screen.blit(level_surf, (width // 2 - 4, height - 57))
+    level_surf: pygame.Surface = font.render(f"{player.level}", 1, (0, 0, 0))
+    screen.blit(level_surf.convert_alpha(), (width // 2 - 4, height - 57))
 
     level_surf = font.render(f"{player.level}", 1, (120, 240, 29))
-    screen.blit(level_surf, (width // 2 - 5, height - 58))
+    screen.blit(level_surf.convert_alpha(), (width // 2 - 5, height - 58))
 
 
 def draw_tabs(screen, is_selected_page, x, y, s_color, uns_color, image, on_bottom: bool):
