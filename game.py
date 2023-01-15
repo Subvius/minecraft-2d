@@ -1,9 +1,7 @@
 import json
 import sqlite3
-
 import sys
 
-import pygame
 from pygame.locals import *
 
 from lib.func.load_images import load_images
@@ -17,8 +15,9 @@ from lib.models.sound import Sound
 from lib.models.settings import Settings
 from lib.func.crafts import *
 from lib.func.save_world import save
-from lib.func.start import get_worlds
+from lib.func.start import get_worlds, check_files_existence
 from lib.models.wand_charge import Charge
+from lib.models.liquid import Wave
 
 clock = pygame.time.Clock()
 
@@ -33,9 +32,11 @@ create_world_font = pygame.font.SysFont('Comic Sans MS', 25)
 
 WIDTH, HEIGHT = 1184, 768
 WINDOW_SIZE = (WIDTH, HEIGHT)
+LIQUIDS_IDS_ARRAY = ["9", "11"]
 JUMP_HEIGHT = 2
 
 worlds, worlds_rect = get_worlds(cursor, WINDOW_SIZE)
+check_files_existence()
 
 screen = pygame.display.set_mode(WINDOW_SIZE, 0, 32)
 
@@ -95,13 +96,6 @@ player_rect = pygame.Rect(100, 1500, 50, 70)
 player = Player(player_rect, player_img, [[None for _ in range(9)] for __ in range(4)], 0, 16.5, 20)
 
 player.inventory.append([None for i in range(4)])
-
-player.inventory[0][0] = {
-    "type": 'block',
-    'item_id': 'obsidian',
-    'numerical_id': '49',
-    'quantity': 64
-}
 
 player.cut_sheet(pygame.image.load("lib/assets/animations/player/idle.png"), 4, 1, "idle")
 player.cut_sheet(pygame.image.load("lib/assets/animations/player/run.png"), 6, 1, "run")
@@ -209,6 +203,7 @@ session_stats = {
 
 mobs = list()
 game_map = list()
+liquids_array = list()
 
 while True:
     if screen_status.screen == 'game':
@@ -261,6 +256,7 @@ while True:
         scroll[1] = int(scroll[1])
 
         map_objects = []
+        water_areas: list[Wave] = []
         possible_x = [num if abs(player_rect.x - num * 32) <= WIDTH // 2 + 64 else 0 for num in range(len(game_map[0]))]
         possible_y = [num if abs(player_rect.y - num * 32) <= WIDTH // 2 else 0 for num in range(128)]
 
@@ -270,20 +266,33 @@ while True:
         y = 0
         for tile_y in possible_y:
             x = 0
+            liquids = [[]]
             for tile_x in possible_x:
                 tile = game_map[tile_y][tile_x]
-                block_id = tile
+                block_id = tile.get("block_id", "0")
                 percentage = 0
                 # if abs(player_rect.x - x * 32) <= width // 2 and abs(player_rect.y - y * 32) <= height // 2:
-                if tile.count("-") > 0:
-                    separated = tile.split("-")
-                    block_id = separated[0]
-                    percentage = math.floor(float(separated[1]) / 10)
-                if tile.count(":") > 0:
-
-                    data = json.loads(tile)
+                if block_id in LIQUIDS_IDS_ARRAY:
+                    try:
+                        if get_block_from_coords(tile_y - 1, tile_x, game_map).get("block_id") not in LIQUIDS_IDS_ARRAY:
+                            liquids[-1].append((tile_x, tile_y))
+                    except IndexError:
+                        # Map border
+                        pass
+                else:
+                    try:
+                        temp_x = possible_x[x - 1]
+                        if get_block_from_coords(tile_y, temp_x, game_map).get("block_id") in LIQUIDS_IDS_ARRAY:
+                            liquids.append([])
+                    except IndexError:
+                        # First element
+                        pass
+                if tile.get("percentage", 0.0) > 0:
+                    percentage = math.floor(float(tile.get("percentage", 0.0)) / 10)
+                if tile.get("floating_blocks", 0) > 0:
+                    data = json.loads(tile.get("floating_blocks"))
                     block_id = list(data.keys())[0]
-                    if game_map[tile_y + 1][tile_x] == "0":
+                    if get_block_from_coords(tile_y + 1, tile_x, game_map).get("block_id") == "0":
                         for key in list(data.keys()):
                             for i in range(data[key]):
                                 falling_items.append({
@@ -292,7 +301,7 @@ while True:
                                     "y": tile_y * 32,
                                     "numerical_id": key
                                 })
-                        game_map[tile_y][tile_x] = "0"
+                        game_map[tile_y][tile_x] = {"block_id": "0"}
                     else:
                         block = blocks_data[block_id]
                         display.blit(pygame.transform.scale(images[block['item_id']], (16, 16)),
@@ -308,7 +317,18 @@ while True:
                             if int(levitating_blocks_animation) <= 6:
                                 blocks_animation_reverse = False
 
-                if block_id != '0' and not tile.count(":"):
+                if block_id != '0' and not tile.get("floating_blocks"):
+                    if block_id == "1" and get_block_from_coords(tile_y - 1, tile_x, game_map).get("block_id") != "0":
+                        game_map[tile_y][tile_x] = {"block_id": "2"}
+                        block_id = "2"
+                    elif block_id == "2" and get_block_from_coords(tile_y - 1, tile_x, game_map).get(
+                            "block_id") == "0" and (
+                            get_block_from_coords(tile_y, tile_x - 1, game_map).get(
+                                "block_id") == "1" or get_block_from_coords(tile_y, tile_x + 1, game_map).get(
+                        "block_id") == "1"):
+                        if random.randint(0, 5000) == 4:
+                            game_map[tile_y][tile_x] = {"block_id": "1"}
+                            block_id = "1"
                     block = blocks_data[block_id]
                     display.blit(pygame.transform.scale(images[block['item_id']], (32, 32)),
                                  (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1]))
@@ -329,26 +349,42 @@ while True:
                         )
                         image.set_colorkey((0, 0, 0), RLEACCEL)
                         display.blit(image, (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1]))
-                    if block_id != "58":
+                    if block_id not in ["58", *LIQUIDS_IDS_ARRAY]:
                         map_objects.append(pygame.Rect(tile_x * 32, tile_y * 32, 32, 32))
 
-                    if game_map[tile_y - 1][tile_x] != "0" and tile_y < 67 and \
-                            game_map[tile_y - 2][tile_x] != "0" and block_id not in ["49", "58", "90", "324", "18",
-                                                                                     "17"]:
-                        draw_rect_alpha(display, (0, 0, 0, 128),
-                                        (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1], 32, 32))
-                    if game_map[tile_y - 1][tile_x] != "0" and tile_y < 67 and \
-                            game_map[tile_y - 2][tile_x] != "0" and game_map[tile_y - 3][
-                        tile_x] != "0" and block_id not in ["49", "58", "90", "324", "18",
-                                                            "17"]:
-                        draw_rect_alpha(display, (0, 0, 0, 10),
-                                        (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1], 32, 32))
-                        # pygame.draw.rect(display, "black",
-                        #                  pygame.Rect(tile_x * 32 - scroll[0], tile_y * 32 - scroll[1], 32, 32))
+                    if screen_status.dimension == 'overworld':
+                        if get_block_from_coords(tile_y - 1, tile_x, game_map).get(
+                                "block_id") != "0" and tile_y < 67 and \
+                                get_block_from_coords(tile_y - 2, tile_x, game_map).get(
+                                    "block_id") != "0" and block_id not in ["49", "58", "90", "324", "18",
+                                                                            "17", *LIQUIDS_IDS_ARRAY]:
+                            draw_rect_alpha(display, (0, 0, 0, 128),
+                                            (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1], 32, 32))
+                        if get_block_from_coords(tile_y - 1, tile_x, game_map).get(
+                                "block_id") != "0" and tile_y < 67 and \
+                                get_block_from_coords(tile_y - 2, tile_x, game_map).get(
+                                    "block_id") != "0" and get_block_from_coords(tile_y - 3, tile_x, game_map).get(
+                            "block_id") != "0" and block_id not in ["49", "58", "90", "324", "18", *LIQUIDS_IDS_ARRAY,
+                                                                    "17"]:
+                            draw_rect_alpha(display, (0, 0, 0, 10),
+                                            (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1], 32, 32))
+                            # pygame.draw.rect(display, "black",
+                            #                  pygame.Rect(tile_x * 32 - scroll[0], tile_y * 32 - scroll[1], 32, 32))
 
                 x += 1
+
+            for liquid in liquids:
+                length = len(liquid)
+                if length != 0:
+                    water = Wave(length * 32, 1, liquid[0][0] * 32, liquid[0][1] * 32)
+                    water_areas.append(water)
             y += 1
 
+        if liquids_array == water_areas:
+            pass
+        else:
+            liquids_array = water_areas
+            print('not equal')
         if random.randint(0, 1000) == 5 and screen_status.world_time > 36_000 and not screen_status.paused:
             position = [random.choice(possible_x) * 32, random.choice(possible_y) * 32]
             # position = [player.rect.x, player.rect.y]
@@ -382,25 +418,28 @@ while True:
                         # else:
                         #     rect.x, rect.bottom = block.midtop
 
-                        if game_map[(block.top - 1) // 32][rect.x // 32] != "0" \
-                                and game_map[(block.top - 1) // 32][rect.x // 32].count(":") == 0:
+                        if get_block_from_coords((block.top - 1) // 32, rect.x // 32, game_map).get("block_id") != "0" \
+                                and not get_block_from_coords((block.top - 1) // 32, rect.x // 32, game_map).get(
+                            "floating_blocks"):
                             for temp_y in range((block.top - 1) // 32, -1, -1):
-                                if game_map[temp_y][rect.x // 32] == "0" \
-                                        or game_map[temp_y][rect.x // 32].count(":") > 0:
+                                if get_block_from_coords(temp_y, rect.x // 32, game_map).get("block_id") == "0" \
+                                        or get_block_from_coords(temp_y, rect.x // 32, game_map).get(
+                                    "floating_blocks"):
                                     rect.x = block.midtop[0]
                                     rect.y = temp_y * 32
                                     break
                         else:
                             rect.x, rect.bottom = block.midtop
 
-                        data_json = game_map[rect.y // 32][rect.x // 32]
-                        if data_json == "0":
-                            game_map[(rect.bottom - 1) // 32][rect.x // 32] = '{_}' \
-                                .replace("_", f'"{item["numerical_id"]}":{1}')
+                        data_json = get_block_from_coords(rect.y // 32, rect.x // 32, game_map).get("floating_blocks")
+                        if get_block_from_coords(rect.y // 32, rect.x // 32, game_map).get("block_id") == "0":
+                            game_map[(rect.bottom - 1) // 32][rect.x // 32] = {
+                                "floating_blocks": '{_}'.replace("_", f'"{item["numerical_id"]}":{1}')}
+
                         else:
                             data = json.loads(data_json)
                             data.update({f"{item['numerical_id']}": data.get(item["numerical_id"], 0) + 1})
-                            game_map[(rect.bottom - 1) // 32][rect.x // 32] = json.dumps(data)
+                            game_map[(rect.bottom - 1) // 32][rect.x // 32] = {"floating_blocks": json.dumps(data)}
                         break
                     elif block.top < rect.y < block.bottom and (block.left < rect.right or block.right > rect.left):
                         rect.x = block.left if rect.right > block.left else block.right
@@ -420,10 +459,10 @@ while True:
 
         player_movement = [0, 0]
         if moving_right:
-            player_movement[0] += 2
+            player_movement[0] += 2 if not player.in_water else 1
             player.moving_direction = 'right'
         if moving_left:
-            player_movement[0] -= 2
+            player_movement[0] -= 2 if not player.in_water else 1
             player.moving_direction = 'left'
 
         if moving_left or moving_right:
@@ -444,6 +483,39 @@ while True:
         temp_rect.x -= player_movement[0]
         if temp_rect.x // 32 != player.rect.x // 32:
             session_stats['distance_traveled'] += 1
+
+        if not collisions['bottom'] and player.jump_start is None:
+            player.jump_start = [temp_rect.x // 32, temp_rect.y // 32]
+
+        # Работает для любой жидкости. Нужно просто внести id в список жидкостей LIQUIDS_IDS_ARRAY
+        for water in liquids_array:
+            temp_x, temp_y = player.rect.x // 32, player.rect.y // 32
+            if game_map[temp_y + 1][temp_x] in LIQUIDS_IDS_ARRAY:
+                if water.position[0] <= player.rect.x <= water.position[0] + water.width and \
+                        water.position[
+                            1] <= player.rect.y + 32 <= water.position[1] + water.height and not player.in_water:
+                    index = water.get_spring_index_for_x_pos(player.rect.x - scroll[0] + 16, scroll[0])
+
+                    water.splash(index, 10)
+                    player.set_in_water(True)
+                    break
+            elif game_map[temp_y + 2][temp_x] in LIQUIDS_IDS_ARRAY:
+                if water.position[0] <= player.rect.x <= water.position[0] + water.width and \
+                        water.position[
+                            1] <= player.rect.y + 48 <= water.position[1] + water.height:
+                    index = water.get_spring_index_for_x_pos(player.rect.x - scroll[0] + 16, scroll[0])
+
+                    water.splash(index, -5)
+                    player.set_in_water(False)
+                    break
+            elif game_map[temp_y + 2][temp_x] not in LIQUIDS_IDS_ARRAY and game_map[temp_y][
+                temp_x] not in LIQUIDS_IDS_ARRAY:
+                player.set_in_water(False)
+                break
+
+        for water in liquids_array:
+            water.update(scroll)
+            water.draw_line(display)
 
         if player.condition == 'run' and collisions['bottom'] and settings.blocks_sound:
             numerical_id = game_map[player.rect.y // 32 + 2][player.rect.x // 32]
@@ -543,7 +615,6 @@ while True:
             pygame.transform.scale(pygame.transform.flip(player.image, player.moving_direction == "left", False),
                                    (32, 64)),
             (player.rect.x - scroll[0], player.rect.y - scroll[1]))
-        # player.draw(display, player_rect.x - scroll[0], player_rect.y - scroll[1])
 
         # Рисуем предмет, который находиться в руке игрока
         if player.inventory[0][player.selected_inventory_slot] is not None and not screen_status.paused:
@@ -1168,142 +1239,18 @@ while True:
             rect = pygame.Rect(left, top, WIDTH, HEIGHT)
             mouse_rect = pygame.Rect(mx, my, 1, 1)
             # Пользователь кликнул в инвентарь
-            if rect.colliderect(mouse_rect):
-                # В какой слот кликнул пользователь
-                item = None
-                button = event.button
-                if 10 <= mx - left <= 10 + 9 * 30 + 1 * 9 and (42 + 3 * 30 + 1 * 3) + 10 <= my - top <= (
-                        42 + 3 * 30 + 1 * 3) + 10 + 30 * 3 + 1 * 3 and (
-                        player.game_mode == 'survival' or sorted(list(screen_status.inventories.values()))[-1]):
-                    size = 30
-                    column = int(mx - left + 15) // size
-                    row = int((my - top - (
-                            42 + 3 * 30 + 1 * 3) - 10) // size)
-                    item = player.inventory[row + 1][column - 1]
-                    if item is not None and selected_item is None:
-                        if button == 1:
-                            block = blocks_data[item["numerical_id"]]
-
-                            selected_item = {
-                                "x": mx,
-                                "y": my,
-                                "item_id": block['item_id'],
-                                "quantity": item["quantity"],
-                                "type": item["type"],
-                                "numerical_id": block['numerical_id']
-                            }
-                            if player.inventory[row + 1][column - 1].get('best_for', None) is not None:
-                                selected_item.update(
-                                    {"best_for": player.inventory[row + 1][column - 1].get('best_for', None)})
-
-                            player.remove_from_inventory(column - 1, item['quantity'], row + 1)
-                        elif button == 3 and item['quantity'] // 2 != 0:
-                            block = blocks_data[item["numerical_id"]]
-
-                            selected_item = {
-                                "x": mx,
-                                "y": my,
-                                "item_id": block['item_id'],
-                                "quantity": item["quantity"] // 2,
-                                "type": item["type"],
-                                "numerical_id": block['numerical_id']
-                            }
-                            item['quantity'] -= item['quantity'] // 2
-                            player.inventory[row + 1][column - 1] = item
-
-                    elif item is None and selected_item is not None:
-                        if button == 1:
-                            player.inventory[row + 1][column - 1] = {
-                                "type": selected_item['type'],
-                                'item_id': selected_item['item_id'],
-                                'numerical_id': selected_item['numerical_id'],
-                                'quantity': selected_item['quantity']
-                            }
-                            if selected_item.get('best_for', None) is not None:
-                                player.inventory[row + 1][column - 1].update(
-                                    {"best_for": selected_item.get('best_for', None)})
-
-                            selected_item = None
-                        elif button == 3:
-                            player.inventory[row + 1][column - 1] = {
-                                "type": selected_item['type'],
-                                'item_id': selected_item['item_id'],
-                                'numerical_id': selected_item['numerical_id'],
-                                'quantity': 1
-                            }
-
-                            if selected_item['quantity'] - 1 == 0:
-                                selected_item = None
-                            else:
-                                selected_item['quantity'] -= 1
-                    elif item is not None and selected_item is not None:
-                        if item['item_id'] == selected_item['item_id']:
-                            block = blocks_data[item['numerical_id']]
-                            max_size = block.get("max_stack_size", 1)
-                            if int(item["quantity"]) < max_size:
-                                item['quantity'] += selected_item['quantity'] if button == 1 else 1
-
-                                if item['quantity'] > max_size:
-                                    selected_item['quantity'] = item['quantity'] - max_size
-                                    item['quantity'] = max_size
-                                    player.inventory[row + 1][column - 1] = item
-                                else:
-                                    if button == 1:
-                                        selected_item = None
-                                    else:
-                                        selected_item['quantity'] -= 1
-                                        if selected_item["quantity"] <= 0:
-                                            selected_item = None
-                        else:
-                            if button == 1:
-                                player.inventory[row + 1][column - 1], selected_item = selected_item, \
-                                                                                       player.inventory[row + 1][
-                                                                                           column - 1]
-                                selected_item['x'] = mx
-                                selected_item['y'] = my
-                elif 10 <= mx - left <= 10 + 9 * 30 + 1 * 9 and 52 <= my - top <= 52 + 30 * 6 + 1 * 6 and \
-                        player.game_mode == 'creative' and screen_status.show_inventory and \
-                        player.creative_inventory_page != 'inventory':
-                    size = 30
-                    column = int(mx - left + 15) // size - 1
-                    row = int((my - top - 52) // size)
-                    if player.creative_inventory_page == 'search':
-                        text = screen_status.creative_inventory_text_field_text
-                        blocks_to_show: dict = {}
-                        if text != "":
-                            for block in blocks_data:
-                                if blocks_data[block]['item_id'].__contains__(text):
-                                    blocks_to_show.update({block: blocks_data[block]})
-                        else:
-                            blocks_to_show = blocks_data
-
-                        index = row * 9 + column + screen_status.creative_inventory_scroll * 9
-                        if index < len(list(blocks_to_show.keys())) and selected_item is None:
-                            keys = pygame.key.get_pressed()
-                            block = blocks_to_show.get(list(blocks_to_show.keys())[index])
-                            selected_item = {
-                                "item_id": block['item_id'],
-                                "numerical_id": block['numerical_id'],
-                                "quantity": block["max_stack_size"] if keys[pygame.K_LSHIFT] else 1,
-                                'x': mx,
-                                'y': my,
-                                "type": 'block' if block.get("material", None) is not None else "tool" if block.get(
-                                    "best_for", None) is not None else "item",
-                            }
-                            if block.get("best_for", None) is not None:
-                                selected_item.update({"best_for": block.get("best_for", None)})
-                        elif selected_item is not None:
-                            selected_item = None
-
-                elif 10 <= mx - left <= 10 + 9 * 30 + 1 * 9 and (
-                        (42 + 3 * 30 + 1 * 3) + 10 + 30 * 2 + 1 * 2) + 40 <= my - top <= (
-                        (42 + 3 * 30 + 1 * 3) + 10 + 30 * 2 + 1 * 2) + 70:
-                    size = 30
-                    column = int(mx - left + 15) // size
-                    row = 0
-                    try:
-                        item = player.inventory[row][column - 1]
-
+            try:
+                if rect.colliderect(mouse_rect):
+                    item = None
+                    button = event.button
+                    if 10 <= mx - left <= 10 + 9 * 30 + 1 * 9 and (42 + 3 * 30 + 1 * 3) + 10 <= my - top <= (
+                            42 + 3 * 30 + 1 * 3) + 10 + 30 * 3 + 1 * 3 and (
+                            player.game_mode == 'survival' or sorted(list(screen_status.inventories.values()))[-1]):
+                        size = 30
+                        column = int(mx - left + 15) // size
+                        row = int((my - top - (
+                                42 + 3 * 30 + 1 * 3) - 10) // size)
+                        item = player.inventory[row + 1][column - 1]
                         if item is not None and selected_item is None:
                             if button == 1:
                                 block = blocks_data[item["numerical_id"]]
@@ -1316,11 +1263,11 @@ while True:
                                     "type": item["type"],
                                     "numerical_id": block['numerical_id']
                                 }
-                                if player.inventory[row][column - 1].get('best_for', None) is not None:
+                                if player.inventory[row + 1][column - 1].get('best_for', None) is not None:
                                     selected_item.update(
-                                        {"best_for": player.inventory[row][column - 1].get('best_for', None)})
+                                        {"best_for": player.inventory[row + 1][column - 1].get('best_for', None)})
 
-                                player.remove_from_inventory(column - 1, item['quantity'], row)
+                                player.remove_from_inventory(column - 1, item['quantity'], row + 1)
                             elif button == 3 and item['quantity'] // 2 != 0:
                                 block = blocks_data[item["numerical_id"]]
 
@@ -1333,21 +1280,23 @@ while True:
                                     "numerical_id": block['numerical_id']
                                 }
                                 item['quantity'] -= item['quantity'] // 2
-                                player.inventory[row][column - 1] = item
+                                player.inventory[row + 1][column - 1] = item
+
                         elif item is None and selected_item is not None:
                             if button == 1:
-                                player.inventory[row][column - 1] = {
+                                player.inventory[row + 1][column - 1] = {
                                     "type": selected_item['type'],
                                     'item_id': selected_item['item_id'],
                                     'numerical_id': selected_item['numerical_id'],
                                     'quantity': selected_item['quantity']
                                 }
                                 if selected_item.get('best_for', None) is not None:
-                                    player.inventory[row][column - 1].update(
+                                    player.inventory[row + 1][column - 1].update(
                                         {"best_for": selected_item.get('best_for', None)})
+
                                 selected_item = None
                             elif button == 3:
-                                player.inventory[row][column - 1] = {
+                                player.inventory[row + 1][column - 1] = {
                                     "type": selected_item['type'],
                                     'item_id': selected_item['item_id'],
                                     'numerical_id': selected_item['numerical_id'],
@@ -1368,7 +1317,7 @@ while True:
                                     if item['quantity'] > max_size:
                                         selected_item['quantity'] = item['quantity'] - max_size
                                         item['quantity'] = max_size
-                                        player.inventory[row][column - 1] = item
+                                        player.inventory[row + 1][column - 1] = item
                                     else:
                                         if button == 1:
                                             selected_item = None
@@ -1378,150 +1327,279 @@ while True:
                                                 selected_item = None
                             else:
                                 if button == 1:
-                                    player.inventory[row][column - 1], selected_item = selected_item, \
-                                                                                       player.inventory[row][
-                                                                                           column - 1]
+                                    player.inventory[row + 1][column - 1], selected_item = selected_item, \
+                                                                                           player.inventory[row + 1][
+                                                                                               column - 1]
                                     selected_item['x'] = mx
                                     selected_item['y'] = my
-                    except IndexError:
-                        print('INDEX ERROR')
-                if button == 1 and (
-                        player.game_mode == 'survival' or sorted(list(screen_status.inventories.values()))[-1]):
-                    if (10 + 4 * 30 + 1 * 4 + 20) <= mx - left <= (10 + 4 * 30 + 1 * 4 + 20) + 2 * 30 + 1 * 2 and (
-                            11 + 32) <= my - top <= (11 + 32) + 30 * 2 + 1 * 2 and screen_status.show_inventory:
+                    elif 10 <= mx - left <= 10 + 9 * 30 + 1 * 9 and 52 <= my - top <= 52 + 30 * 6 + 1 * 6 and \
+                            player.game_mode == 'creative' and screen_status.show_inventory and \
+                            player.creative_inventory_page != 'inventory':
                         size = 30
-                        column = int(mx - left - (10 + 4 * 30 + 1 * 4 + 20)) // size
-                        row = int((my - top - (11 + 32)) // size)
-                        if inventory_crafting_slots[row][column] is None and selected_item is not None:
-                            inventory_crafting_slots[row][column] = {
-                                'item_id': selected_item["item_id"], 'quantity': selected_item["quantity"],
-                                'type': selected_item["type"], 'numerical_id': selected_item["numerical_id"]
-                            }
-                            selected_item = None
-                        elif inventory_crafting_slots[row][column] is not None and selected_item is None:
-                            selected_item = inventory_crafting_slots[row][column]
-                            selected_item["x"] = mx
-                            selected_item["y"] = my
-                            inventory_crafting_slots[row][column] = None
+                        column = int(mx - left + 15) // size - 1
+                        row = int((my - top - 52) // size)
+                        if player.creative_inventory_page == 'search':
+                            text = screen_status.creative_inventory_text_field_text
+                            blocks_to_show: dict = {}
+                            if text != "":
+                                for block in blocks_data:
+                                    if blocks_data[block]['item_id'].__contains__(text):
+                                        blocks_to_show.update({block: blocks_data[block]})
+                            else:
+                                blocks_to_show = blocks_data
 
-                        res = check_if_can_craft(True, inventory_crafting_slots, recipes)
-                        print(res)
-                        if res[0]:
-                            craft_result = res[2]
-                            print(craft_result)
-                        else:
-                            craft_result = None
-                    elif (10 + 4 * 30 + 1 * 4 + 20) + 1 * 30 + 1 * 1 + 68 <= mx - left <= (
-                            10 + 4 * 30 + 1 * 4 + 20) + 1 * 30 + 1 * 1 + 98 and (
-                            11 + 30) + 30 * 1 + 1 * 1 - 15 <= my - top <= (
-                            11 + 30) + 30 * 1 + 1 * 1 + 15 and screen_status.show_inventory:
-                        if craft_result is not None:
-                            block = get_block_data_by_name(blocks_data, craft_result['result']['item'])
-                            if selected_item is None:
+                            index = row * 9 + column + screen_status.creative_inventory_scroll * 9
+                            if index < len(list(blocks_to_show.keys())) and selected_item is None:
+                                keys = pygame.key.get_pressed()
+                                block = blocks_to_show.get(list(blocks_to_show.keys())[index])
                                 selected_item = {
                                     "item_id": block['item_id'],
                                     "numerical_id": block['numerical_id'],
-                                    "quantity": craft_result['result'].get("count", 1),
+                                    "quantity": block["max_stack_size"] if keys[pygame.K_LSHIFT] else 1,
                                     'x': mx,
                                     'y': my,
                                     "type": 'block' if block.get("material", None) is not None else "tool" if block.get(
                                         "best_for", None) is not None else "item",
                                 }
-                            elif selected_item is not None and selected_item["item_id"] == block["item_id"]:
-                                selected_item['quantity'] += craft_result['result'].get("count", 1)
-                            if selected_item['item_id'] == block['item_id']:
                                 if block.get("best_for", None) is not None:
                                     selected_item.update({"best_for": block.get("best_for", None)})
-                                for row in inventory_crafting_slots:
-                                    row_index = inventory_crafting_slots.index(row)
-                                    for slot in row:
-                                        slot_index = row.index(slot)
-                                        if slot is not None:
-                                            slot["quantity"] -= 1
-                                            if slot['quantity'] <= 0:
-                                                inventory_crafting_slots[row_index][slot_index] = None
-                                            else:
-                                                inventory_crafting_slots[row_index][slot_index] = slot
-                                session_stats['successful_crafts'] += 1
-                                res = check_if_can_craft(True, inventory_crafting_slots, recipes)
-                                if res[0]:
-                                    craft_result = res[2]
-                                else:
-                                    craft_result = None
+                            elif selected_item is not None:
+                                selected_item = None
 
-                    if 41 <= mx - left <= 41 + 3 * 30 + 1 * 3 and 25 <= my - top <= 25 + 30 * 3 + 1 * 3 \
-                            and screen_status.inventories.get("crafting_table", False):
+                    elif 10 <= mx - left <= 10 + 9 * 30 + 1 * 9 and (
+                            (42 + 3 * 30 + 1 * 3) + 10 + 30 * 2 + 1 * 2) + 40 <= my - top <= (
+                            (42 + 3 * 30 + 1 * 3) + 10 + 30 * 2 + 1 * 2) + 70:
                         size = 30
-                        column = int(mx - left - 41) // size
-                        row = int((my - top - 25) // size)
-                        if crafting_table_slots[row][column] is None and selected_item is not None:
-                            crafting_table_slots[row][column] = {
-                                'item_id': selected_item["item_id"], 'quantity': selected_item["quantity"],
-                                'type': selected_item["type"], 'numerical_id': selected_item["numerical_id"]
-                            }
-                            selected_item = None
-                        elif crafting_table_slots[row][column] is not None and selected_item is None:
-                            selected_item = crafting_table_slots[row][column]
-                            selected_item["x"] = mx
-                            selected_item["y"] = my
-                            crafting_table_slots[row][column] = None
+                        column = int(mx - left + 15) // size
+                        row = 0
+                        try:
+                            item = player.inventory[row][column - 1]
 
-                        res = check_if_can_craft(False, crafting_table_slots, recipes)
-                        print(res)
-                        if res[0]:
-                            craft_result = res[2]
-                            print(craft_result)
-                        else:
-                            craft_result = None
-                    elif (10 + 4 * 30 + 1 * 4 + 20) + 68 - 33 <= mx - left <= (10 + 4 * 30 + 1 * 4 + 20) + 68 - 3 and (
-                            11 + 30) + 30 * 1 + 1 * 1 - 15 <= my - top <= (
-                            11 + 30) + 30 * 1 + 1 * 1 + 15 and screen_status.inventories.get("crafting_table", False):
-                        if craft_result is not None:
-                            block = get_block_data_by_name(blocks_data, craft_result['result']['item'])
-                            if selected_item is None:
-                                selected_item = {
-                                    "item_id": block['item_id'],
-                                    "numerical_id": block['numerical_id'],
-                                    "quantity": craft_result['result'].get("count", 1),
-                                    'x': mx,
-                                    'y': my,
-                                    "type": 'block' if block.get("material", None) is not None else "tool" if block.get(
-                                        "best_for", None) is not None else "item",
-                                }
-                            elif selected_item is not None and selected_item["item_id"] == block["item_id"]:
-                                selected_item['quantity'] += craft_result['result'].get("count", 1)
-                            if selected_item['item_id'] == block['item_id']:
-                                if block.get("best_for", None) is not None:
-                                    selected_item.update({"best_for": block.get("best_for", None)})
-                                for row in crafting_table_slots:
-                                    row_index = crafting_table_slots.index(row)
-                                    for slot in row:
-                                        slot_index = row.index(slot)
-                                        if slot is not None:
-                                            slot["quantity"] -= 1
-                                            if slot['quantity'] <= 0:
-                                                crafting_table_slots[row_index][slot_index] = None
+                            if item is not None and selected_item is None:
+                                if button == 1:
+                                    block = blocks_data[item["numerical_id"]]
+
+                                    selected_item = {
+                                        "x": mx,
+                                        "y": my,
+                                        "item_id": block['item_id'],
+                                        "quantity": item["quantity"],
+                                        "type": item["type"],
+                                        "numerical_id": block['numerical_id']
+                                    }
+                                    if player.inventory[row][column - 1].get('best_for', None) is not None:
+                                        selected_item.update(
+                                            {"best_for": player.inventory[row][column - 1].get('best_for', None)})
+
+                                    player.remove_from_inventory(column - 1, item['quantity'], row)
+                                elif button == 3 and item['quantity'] // 2 != 0:
+                                    block = blocks_data[item["numerical_id"]]
+
+                                    selected_item = {
+                                        "x": mx,
+                                        "y": my,
+                                        "item_id": block['item_id'],
+                                        "quantity": item["quantity"] // 2,
+                                        "type": item["type"],
+                                        "numerical_id": block['numerical_id']
+                                    }
+                                    item['quantity'] -= item['quantity'] // 2
+                                    player.inventory[row][column - 1] = item
+                            elif item is None and selected_item is not None:
+                                if button == 1:
+                                    player.inventory[row][column - 1] = {
+                                        "type": selected_item['type'],
+                                        'item_id': selected_item['item_id'],
+                                        'numerical_id': selected_item['numerical_id'],
+                                        'quantity': selected_item['quantity']
+                                    }
+                                    if selected_item.get('best_for', None) is not None:
+                                        player.inventory[row][column - 1].update(
+                                            {"best_for": selected_item.get('best_for', None)})
+                                    selected_item = None
+                                elif button == 3:
+                                    player.inventory[row][column - 1] = {
+                                        "type": selected_item['type'],
+                                        'item_id': selected_item['item_id'],
+                                        'numerical_id': selected_item['numerical_id'],
+                                        'quantity': 1
+                                    }
+
+                                    if selected_item['quantity'] - 1 == 0:
+                                        selected_item = None
+                                    else:
+                                        selected_item['quantity'] -= 1
+                            elif item is not None and selected_item is not None:
+                                if item['item_id'] == selected_item['item_id']:
+                                    block = blocks_data[item['numerical_id']]
+                                    max_size = block.get("max_stack_size", 1)
+                                    if int(item["quantity"]) < max_size:
+                                        item['quantity'] += selected_item['quantity'] if button == 1 else 1
+
+                                        if item['quantity'] > max_size:
+                                            selected_item['quantity'] = item['quantity'] - max_size
+                                            item['quantity'] = max_size
+                                            player.inventory[row][column - 1] = item
+                                        else:
+                                            if button == 1:
+                                                selected_item = None
                                             else:
-                                                crafting_table_slots[row_index][slot_index] = slot
-                                session_stats['successful_crafts'] += 1
-
-                                res = check_if_can_craft(False, crafting_table_slots, recipes)
-                                if res[0]:
-                                    craft_result = res[2]
+                                                selected_item['quantity'] -= 1
+                                                if selected_item["quantity"] <= 0:
+                                                    selected_item = None
                                 else:
-                                    craft_result = None
-                elif button == 1 and player.game_mode == 'creative' and screen_status.show_inventory and \
-                        player.creative_inventory_page == 'search':
-                    x = left + 14 + 30 * 4
-                    y = top + 14
-                    box_width = 30 * 5 + 2
-                    box_height = 24
+                                    if button == 1:
+                                        player.inventory[row][column - 1], selected_item = selected_item, \
+                                                                                           player.inventory[row][
+                                                                                               column - 1]
+                                        selected_item['x'] = mx
+                                        selected_item['y'] = my
+                        except IndexError:
+                            print('INDEX ERROR')
+                    if button == 1 and (
+                            player.game_mode == 'survival' or sorted(list(screen_status.inventories.values()))[-1]):
+                        if (10 + 4 * 30 + 1 * 4 + 20) <= mx - left <= (10 + 4 * 30 + 1 * 4 + 20) + 2 * 30 + 1 * 2 and (
+                                11 + 32) <= my - top <= (11 + 32) + 30 * 2 + 1 * 2 and screen_status.show_inventory:
+                            size = 30
+                            column = int(mx - left - (10 + 4 * 30 + 1 * 4 + 20)) // size
+                            row = int((my - top - (11 + 32)) // size)
+                            if inventory_crafting_slots[row][column] is None and selected_item is not None:
+                                inventory_crafting_slots[row][column] = {
+                                    'item_id': selected_item["item_id"], 'quantity': selected_item["quantity"],
+                                    'type': selected_item["type"], 'numerical_id': selected_item["numerical_id"]
+                                }
+                                selected_item = None
+                            elif inventory_crafting_slots[row][column] is not None and selected_item is None:
+                                selected_item = inventory_crafting_slots[row][column]
+                                selected_item["x"] = mx
+                                selected_item["y"] = my
+                                inventory_crafting_slots[row][column] = None
 
-                    search_rect = pygame.Rect(x, y, box_width, box_height)
-                    if search_rect.collidepoint(mx, my):
-                        text_field_focused = True
-                    else:
-                        text_field_focused = False
+                            res = check_if_can_craft(True, inventory_crafting_slots, recipes)
+                            print(res)
+                            if res[0]:
+                                craft_result = res[2]
+                                print(craft_result)
+                            else:
+                                craft_result = None
+                        elif (10 + 4 * 30 + 1 * 4 + 20) + 1 * 30 + 1 * 1 + 68 <= mx - left <= (
+                                10 + 4 * 30 + 1 * 4 + 20) + 1 * 30 + 1 * 1 + 98 and (
+                                11 + 30) + 30 * 1 + 1 * 1 - 15 <= my - top <= (
+                                11 + 30) + 30 * 1 + 1 * 1 + 15 and screen_status.show_inventory:
+                            if craft_result is not None:
+                                block = get_block_data_by_name(blocks_data, craft_result['result']['item'])
+                                if selected_item is None:
+                                    selected_item = {
+                                        "item_id": block['item_id'],
+                                        "numerical_id": block['numerical_id'],
+                                        "quantity": craft_result['result'].get("count", 1),
+                                        'x': mx,
+                                        'y': my,
+                                        "type": 'block' if block.get("material",
+                                                                     None) is not None else "tool" if block.get(
+                                            "best_for", None) is not None else "item",
+                                    }
+                                elif selected_item is not None and selected_item["item_id"] == block["item_id"]:
+                                    selected_item['quantity'] += craft_result['result'].get("count", 1)
+                                if selected_item['item_id'] == block['item_id']:
+                                    if block.get("best_for", None) is not None:
+                                        selected_item.update({"best_for": block.get("best_for", None)})
+                                    for row in inventory_crafting_slots:
+                                        row_index = inventory_crafting_slots.index(row)
+                                        for slot in row:
+                                            slot_index = row.index(slot)
+                                            if slot is not None:
+                                                slot["quantity"] -= 1
+                                                if slot['quantity'] <= 0:
+                                                    inventory_crafting_slots[row_index][slot_index] = None
+                                                else:
+                                                    inventory_crafting_slots[row_index][slot_index] = slot
+                                    session_stats['successful_crafts'] += 1
+                                    res = check_if_can_craft(True, inventory_crafting_slots, recipes)
+                                    if res[0]:
+                                        craft_result = res[2]
+                                    else:
+                                        craft_result = None
+
+                        if 41 <= mx - left <= 41 + 3 * 30 + 1 * 3 and 25 <= my - top <= 25 + 30 * 3 + 1 * 3 \
+                                and screen_status.inventories.get("crafting_table", False):
+                            size = 30
+                            column = int(mx - left - 41) // size
+                            row = int((my - top - 25) // size)
+                            if crafting_table_slots[row][column] is None and selected_item is not None:
+                                crafting_table_slots[row][column] = {
+                                    'item_id': selected_item["item_id"], 'quantity': selected_item["quantity"],
+                                    'type': selected_item["type"], 'numerical_id': selected_item["numerical_id"]
+                                }
+                                selected_item = None
+                            elif crafting_table_slots[row][column] is not None and selected_item is None:
+                                selected_item = crafting_table_slots[row][column]
+                                selected_item["x"] = mx
+                                selected_item["y"] = my
+                                crafting_table_slots[row][column] = None
+
+                            res = check_if_can_craft(False, crafting_table_slots, recipes)
+                            print(res)
+                            if res[0]:
+                                craft_result = res[2]
+                                print(craft_result)
+                            else:
+                                craft_result = None
+                        elif (10 + 4 * 30 + 1 * 4 + 20) + 68 - 33 <= mx - left <= (
+                                10 + 4 * 30 + 1 * 4 + 20) + 68 - 3 and (
+                                11 + 30) + 30 * 1 + 1 * 1 - 15 <= my - top <= (
+                                11 + 30) + 30 * 1 + 1 * 1 + 15 and screen_status.inventories.get("crafting_table",
+                                                                                                 False):
+                            if craft_result is not None:
+                                block = get_block_data_by_name(blocks_data, craft_result['result']['item'])
+                                if selected_item is None:
+                                    selected_item = {
+                                        "item_id": block['item_id'],
+                                        "numerical_id": block['numerical_id'],
+                                        "quantity": craft_result['result'].get("count", 1),
+                                        'x': mx,
+                                        'y': my,
+                                        "type": 'block' if block.get("material",
+                                                                     None) is not None else "tool" if block.get(
+                                            "best_for", None) is not None else "item",
+                                    }
+                                elif selected_item is not None and selected_item["item_id"] == block["item_id"]:
+                                    selected_item['quantity'] += craft_result['result'].get("count", 1)
+                                if selected_item['item_id'] == block['item_id']:
+                                    if block.get("best_for", None) is not None:
+                                        selected_item.update({"best_for": block.get("best_for", None)})
+                                    for row in crafting_table_slots:
+                                        row_index = crafting_table_slots.index(row)
+                                        for slot in row:
+                                            slot_index = row.index(slot)
+                                            if slot is not None:
+                                                slot["quantity"] -= 1
+                                                if slot['quantity'] <= 0:
+                                                    crafting_table_slots[row_index][slot_index] = None
+                                                else:
+                                                    crafting_table_slots[row_index][slot_index] = slot
+                                    session_stats['successful_crafts'] += 1
+
+                                    res = check_if_can_craft(False, crafting_table_slots, recipes)
+                                    if res[0]:
+                                        craft_result = res[2]
+                                    else:
+                                        craft_result = None
+                    elif button == 1 and player.game_mode == 'creative' and screen_status.show_inventory and \
+                            player.creative_inventory_page == 'search':
+                        x = left + 14 + 30 * 4
+                        y = top + 14
+                        box_width = 30 * 5 + 2
+                        box_height = 24
+
+                        search_rect = pygame.Rect(x, y, box_width, box_height)
+                        if search_rect.collidepoint(mx, my):
+                            text_field_focused = True
+                        else:
+                            text_field_focused = False
+            except IndexError:
+                # Player clicked into separating area
+                pass
 
         if event.type == pygame.MOUSEMOTION and not player.is_dead and screen_status.screen == "game" and (
                 screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]) \

@@ -56,7 +56,7 @@ def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Pl
         try:
             tile = game_map[value_y][value_x]
             # игрок кликнул по "воздуху" и рядом с "воздухом есть блок"
-            if tile == "0":
+            if tile in ["0", "9"]:
                 if game_map[value_y + 1][value_x] != "0" or game_map[value_y - 1][value_x] != "0" \
                         or game_map[value_y][value_x + 1] != "0" or game_map[value_y][value_x - 1] != "0":
                     selected = player.inventory[0][player.selected_inventory_slot]
@@ -66,7 +66,7 @@ def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Pl
                         player.remove_from_inventory(player.selected_inventory_slot, 1)
                         session_stats.update({"blocks_placed": session_stats.get('blocks_placed', 0) + 1})
 
-            elif tile == "58":
+            elif tile.count("{") == 0 and tile.split("-")[0] == "58":
                 screen_status.toggle_inventory("crafting_table")
         except IndexError:
             print('доделать!!!!! (lib/models/map.py), line: 26')
@@ -103,6 +103,14 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
                                 num_id = "4"
                             elif tile == '16':
                                 num_id = '263'
+                            elif tile == "21":
+                                num_id = "351"
+                            elif tile == '56':
+                                num_id = "264"
+                            elif tile == "73":
+                                num_id = "331"
+                            elif tile == "129":
+                                num_id = "388"
                             x += scroll[0]
                             y += scroll[1]
                             x //= 32
@@ -141,7 +149,7 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
                     damage = item.get("damage", 1)
                 for i in range(len(mobs)):
                     mob = mobs[i]
-                    if mob.rect.colliderect(mouse_rect):
+                    if mob.rect.colliderect(mouse_rect) and not mob.is_dead:
                         dead = mob.damage(damage, sounds)
                         if dead:
                             mob.change_condition("death")
@@ -947,10 +955,12 @@ def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimens
                 elif 1 <= tile_y <= 60:
                     value = random.randint(0, 1000)
                     block_id = 0
-                    if 0 <= value <= 624:
-                        block_id = get_block_data_by_name(blocks_data, 'stone')['numerical_id']
-                    elif 925 <= value <= 1000:
-                        block_id = ore_generator(tile_y, y_max)
+                    height = math.floor(noise.pnoise2(tile_x * 0.1, tile_y * 0.1) * (seed ** 0.5))
+                    if height < seed ** 0.5 * 0.1:
+                        if 925 <= value <= 1000:
+                            block_id = ore_generator(tile_y, y_max)
+                        else:
+                            block_id = get_block_data_by_name(blocks_data, 'stone')['numerical_id']
 
                     game_map[tile_y][tile_x] = block_id.__str__()
                 elif 60 <= tile_y <= 64:
@@ -960,30 +970,8 @@ def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimens
                 elif 65 <= tile_y <= 70:
                     # value = random.randint(1, 1000)
                     height = math.floor(noise.pnoise1(tile_x * 0.1, repeat=9999999) * (seed ** 0.5))
-
                     if tile_y <= (70 + 65) // 2 - height and game_map[tile_y][tile_x] == "0":
                         game_map[tile_y][tile_x] = "1"
-                    # if 1 <= value <= 30:
-                    #     if game_map[tile_y - 1][tile_x] != "0":
-                    #         mountain = mountains[random.randint(1, 4) - 1]
-                    #
-                    #         mountain = mountain.replace('/', "1")
-                    #         mountain = mountain.replace('\\', "1")
-                    #         mountain = mountain.replace(' ', "0")
-                    #         mountain_list = mountain.split("\n")
-                    #         print(mountain_list)
-                    #         mountain_list = mountain_list[::-1]
-                    #         print(mountain_list)
-                    #
-                    #         for y_adder in range(len(mountain_list)):
-                    #             for x_adder in range(len(mountain_list[0])):
-                    #                 try:
-                    #                     current = mountain_list[y_adder][x_adder]
-                    #                     game_map[tile_y + y_adder][tile_x - len(mountain_list[0]) + x_adder] = current
-                    #                 except IndexError:
-                    #                     # мы вышли за границу карты
-                    #                     pass
-                    #             print()
 
                 if game_map[tile_y][tile_x - 5] == "0" and game_map[tile_y - 1][tile_x - 5] != "0" \
                         and 70 >= tile_y >= 65:
@@ -1027,11 +1015,14 @@ def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimens
                     block_id = get_block_data_by_name(blocks_data, 'netherrack')['numerical_id']
                     game_map[tile_y][tile_x] = block_id.__str__()
                 elif 65 <= tile_y <= 70:
-                    # value = random.randint(1, 1000)
+                    value = random.randint(1, 1000)
                     height = math.floor(noise.pnoise1(tile_x * 0.1, repeat=9999999) * (seed ** 0.5))
 
                     if tile_y <= (70 + 65) // 2 - height:
                         game_map[tile_y][tile_x] = "87"
+                    # else:
+                    #     if 0 <= value <= 950 and game_map[tile_y - 1][tile_x] != "0":
+                    #         game_map[tile_y][tile_x] = "11"
                 elif 95 <= tile_y <= 128:
                     block_id = get_block_data_by_name(blocks_data, 'netherrack')['numerical_id']
                     game_map[tile_y][tile_x] = block_id.__str__()

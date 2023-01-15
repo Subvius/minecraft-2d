@@ -37,3 +37,12 @@ def get_block_data_by_name(blocks_data: dict, name: str):
             return block[1]
 
     return
+
+
+def get_block_from_coords(x: int, y: int, game_map: list) -> dict:
+    try:
+        data = game_map[y][x]
+    except IndexError:
+        print("INDEX ERROR CAUSED BY WRONG BLOCK COORD")
+        return {}
+    return data

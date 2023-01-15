@@ -27,6 +27,7 @@ class Player:
         self.exp = 6
         self.level = 0
         self.game_mode = "survival"
+        self.in_water = False
 
     def cut_sheet(self, sheet, columns, rows, animation_type):
         self.rect = pygame.Rect(0, 0, sheet.get_width() // columns,
@@ -48,6 +49,9 @@ class Player:
 
     def change_condition(self, condition):
         self.condition = condition
+
+    def set_in_water(self, value: bool):
+        self.in_water = value
 
     def draw(self, screen, x, y):
         screen.blit(self.image, (x, y))
