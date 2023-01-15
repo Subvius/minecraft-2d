@@ -14,6 +14,7 @@ class Settings:
         self.portal_interact = "K_f"
         self.play_music = True
         self.blocks_sound = True
+        self.toggle_map = "K_m"
         self.path = path
         self.default = {
             "move_left": "K_a",
@@ -24,7 +25,8 @@ class Settings:
             "inventory": "K_e",
             "drop": "K_q",
             "toggle_creative_mode": "K_c",
-            "portal_interact": "K_f"
+            "portal_interact": "K_f",
+            "toggle_map": "K_m"
         }
         self.load_settings()
 
@@ -43,6 +45,7 @@ class Settings:
         self.portal_interact = data['portal_interact']
         self.play_music = data['music']
         self.blocks_sound = data['blocks']
+        self.toggle_map = data["toggle_map"]
 
     def update_setting(self, setting: str, new_value: any):
         with open(self.path, "r") as f:
@@ -65,6 +68,7 @@ class Settings:
             "inventory": self.inventory,
             "drop": self.drop,
             "toggle_creative_mode": self.toggle_creative_mode,
-            "portal_interact": self.portal_interact
+            "portal_interact": self.portal_interact,
+            "toggle_map": self.toggle_map
         }
         return res

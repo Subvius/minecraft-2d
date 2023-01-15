@@ -54,14 +54,16 @@ def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Pl
         value_x = (x + scroll[0]) // 32
         value_y = (y + scroll[1]) // 32
         try:
-            tile = game_map[value_y][value_x]
+            tile = game_map[value_y][value_x].get("block_id")
             # игрок кликнул по "воздуху" и рядом с "воздухом есть блок"
             if tile in ["0", "9"]:
-                if game_map[value_y + 1][value_x] != "0" or game_map[value_y - 1][value_x] != "0" \
-                        or game_map[value_y][value_x + 1] != "0" or game_map[value_y][value_x - 1] != "0":
+                if game_map[value_y + 1][value_x].get("block_id") != "0" or game_map[value_y - 1][value_x].get(
+                        "block_id") != "0" \
+                        or game_map[value_y][value_x + 1].get("block_id") != "0" or game_map[value_y][value_x - 1].get(
+                    "block_id") != "0":
                     selected = player.inventory[0][player.selected_inventory_slot]
                     if selected is not None and selected['type'] == 'block':
-                        game_map[value_y][value_x] = selected['numerical_id']
+                        game_map[value_y][value_x] = {"block_id": selected['numerical_id']}
                         map_objects.append(pygame.Rect(value_x * 32, value_y * 32, 32, 32))
                         player.remove_from_inventory(player.selected_inventory_slot, 1)
                         session_stats.update({"blocks_placed": session_stats.get('blocks_placed', 0) + 1})
@@ -85,7 +87,7 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
         value_y = (y + scroll[1]) // 32
         try:
             data = game_map[value_y][value_x]
-            tile = data if not data.count("-") else data.split("-")[0]
+            tile = data.get("block_id", "0")
             if tile != "0" and not tile.count(":"):
 
                 block_data = blocks_data[tile]
@@ -94,7 +96,7 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
                         breaking_time = calculate_breaking_time(block_data, player)
                         now = datetime.datetime.now()
                         if now - hold_start >= datetime.timedelta(seconds=breaking_time):
-                            game_map[value_y][value_x] = '0'
+                            game_map[value_y][value_x] = {"block_id": '0'}
                             map_objects.remove(pygame.Rect(value_x * 32, value_y * 32, 32, 32))
                             hold_start = now
 
@@ -139,7 +141,7 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
                             time_spent = now - hold_start
                             percentage = (time_spent / datetime.timedelta(
                                 seconds=breaking_time)) * 100
-                            game_map[value_y][value_x] = f"{tile}-{int(percentage)}"
+                            game_map[value_y][value_x] = {"block_id": f"{tile}", "percentage": percentage}
             if check_mobs:
                 mouse_rect = pygame.Rect(x + scroll[0], y + scroll[1], 1, 1)
                 holding_item = player.inventory[0][player.selected_inventory_slot]
@@ -225,7 +227,7 @@ def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possib
                     mob.change_condition('walk')
 
         try:
-            if game_map[rect.y // 32 + 1][rect.x // 32] == "0":
+            if game_map[rect.y // 32 + 1][rect.x // 32].get("block_id") == "0":
                 movement[1] += 1
         except IndexError:
             # Escaped from map :(
@@ -914,7 +916,7 @@ def draw_sun(screen: pygame.Surface, screen_status: lib.models.screen.Screen, ic
 
 def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimension):
     x_max = 8 * quantity_of_chunks
-    game_map = [["0" for _ in range(x_max)] for _ in range(y_max)]
+    game_map = [[{"block_id": "0"} for _ in range(x_max)] for _ in range(y_max)]
 
     trees = [
         """ 1111
@@ -951,7 +953,8 @@ def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimens
 
                 if tile_y == 0:
                     block = get_block_data_by_name(blocks_data, 'stone')
-                    game_map[tile_y][tile_x] = block['numerical_id'] if block is not None else '0'
+                    game_map[tile_y][tile_x] = {"block_id": block['numerical_id']} if block is not None else {
+                        "block_id": '0'}
                 elif 1 <= tile_y <= 60:
                     value = random.randint(0, 1000)
                     block_id = 0
@@ -962,18 +965,19 @@ def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimens
                         else:
                             block_id = get_block_data_by_name(blocks_data, 'stone')['numerical_id']
 
-                    game_map[tile_y][tile_x] = block_id.__str__()
+                    game_map[tile_y][tile_x] = {"block_id": block_id.__str__()}
                 elif 60 <= tile_y <= 64:
                     block_id = get_block_data_by_name(blocks_data, 'dirt')['numerical_id']
 
-                    game_map[tile_y][tile_x] = block_id.__str__()
+                    game_map[tile_y][tile_x] = {"block_id": block_id.__str__()}
                 elif 65 <= tile_y <= 70:
                     # value = random.randint(1, 1000)
                     height = math.floor(noise.pnoise1(tile_x * 0.1, repeat=9999999) * (seed ** 0.5))
-                    if tile_y <= (70 + 65) // 2 - height and game_map[tile_y][tile_x] == "0":
-                        game_map[tile_y][tile_x] = "1"
+                    if tile_y <= (70 + 65) // 2 - height and game_map[tile_y][tile_x].get("block_id") == "0":
+                        game_map[tile_y][tile_x] = {"block_id": "1"}
 
-                if game_map[tile_y][tile_x - 5] == "0" and game_map[tile_y - 1][tile_x - 5] != "0" \
+                if game_map[tile_y][tile_x - 5].get("block_id") == "0" and game_map[tile_y - 1][tile_x - 5].get(
+                        "block_id") != "0" \
                         and 70 >= tile_y >= 65:
                     value = random.randint(1, 1000)
                     if 0 <= value <= 100:
@@ -990,8 +994,8 @@ def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimens
                                     if current != "0":
                                         game_map[tile_y + y_adder][
                                             tile_x - 5 - len(tree[
-                                                                 0]) + x_adder] = "18" if current == "1" \
-                                            else "17"
+                                                                 0]) + x_adder] = {"block_id": "18"} if current == "1" \
+                                            else {"block_id": "17"}
                                 except IndexError:
                                     # мы вышли за границу карты
                                     pass
@@ -1002,7 +1006,8 @@ def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimens
 
                 if tile_y == 0:
                     block = get_block_data_by_name(blocks_data, 'netherrack')
-                    game_map[tile_y][tile_x] = block['numerical_id'] if block is not None else '0'
+                    game_map[tile_y][tile_x] = {"block_id": block['numerical_id']} if block is not None else {
+                        "block_id": '0'}
                 elif 1 <= tile_y <= 60:
                     value = random.randint(0, 1000)
                     block_id = 0
@@ -1010,22 +1015,22 @@ def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimens
                         block_id = get_block_data_by_name(blocks_data, 'netherrack')['numerical_id']
                     elif 925 <= value <= 1000:
                         block_id = ore_generator(tile_y, y_max, dimension='nether')
-                    game_map[tile_y][tile_x] = block_id.__str__()
+                    game_map[tile_y][tile_x] = {"block_id": block_id.__str__()}
                 elif 60 <= tile_y <= 64:
                     block_id = get_block_data_by_name(blocks_data, 'netherrack')['numerical_id']
-                    game_map[tile_y][tile_x] = block_id.__str__()
+                    game_map[tile_y][tile_x] = {"block_id": block_id.__str__()}
                 elif 65 <= tile_y <= 70:
                     value = random.randint(1, 1000)
                     height = math.floor(noise.pnoise1(tile_x * 0.1, repeat=9999999) * (seed ** 0.5))
 
                     if tile_y <= (70 + 65) // 2 - height:
-                        game_map[tile_y][tile_x] = "87"
+                        game_map[tile_y][tile_x] = {"block_id": "87"}
                     # else:
                     #     if 0 <= value <= 950 and game_map[tile_y - 1][tile_x] != "0":
                     #         game_map[tile_y][tile_x] = "11"
                 elif 95 <= tile_y <= 128:
                     block_id = get_block_data_by_name(blocks_data, 'netherrack')['numerical_id']
-                    game_map[tile_y][tile_x] = block_id.__str__()
+                    game_map[tile_y][tile_x] = {"block_id": block_id.__str__()}
 
     if dimension == 'nether':
         for i in range(6):

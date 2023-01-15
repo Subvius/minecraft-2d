@@ -72,8 +72,8 @@ class Player:
         if not self.is_dead:
             block = game_map[self.rect.y // 32 + 1][self.rect.x // 32]
             rect = pygame.Rect(self.rect.x, self.rect.y, 32, 64)
-            if block.count(":") and rect.colliderect(self.rect):
-                return True, block
+            if block.get("floating_blocks") and rect.colliderect(self.rect):
+                return True, block.get("floating_blocks")
         return False, None
 
     def heal(self, hp: int = 1):

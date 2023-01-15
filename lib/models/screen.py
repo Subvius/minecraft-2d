@@ -14,12 +14,45 @@ class Screen:
         self.creative_inventory_scroll = 0
         self.creative_inventory_text_field_text = ""
         self.charges = list()
+        self.map_view_settings = {
+            "max_zoom": 4,
+            "min_zoom": 1,
+            "zoom": 4,
+            "max_block_size": 32,
+            "camera_x": 500,
+            "camera_y": 500,
+
+        }
+        self.mouse_pressed = {
+            "left": False,
+            "middle": False,
+            "right": False,
+        }
 
     def change_scene(self, screen: str):
         """Changes screen to another. Can't be same as current"""
         if self.screen == screen:
             return
         self.screen = screen
+
+    def set_zoom(self, y):
+        zoom = self.map_view_settings.get("zoom", 4)
+        zoom += y
+        if zoom > 4:
+            zoom = 4
+        elif zoom < 1:
+            zoom = 1
+        self.map_view_settings.update({"zoom": zoom})
+
+    def set_map_view_camera(self, x, y):
+        self.map_view_settings.update({"camera_x": x})
+        self.map_view_settings.update({"camera_y": y})
+
+    def get_map_view_block_size(self) -> int:
+        return self.map_view_settings.get("max_block_size", 32) // self.map_view_settings.get("zoom", 1)
+
+    def get_map_view_camera_coord(self):
+        return self.map_view_settings.get("camera_x"), self.map_view_settings.get("camera_y")
 
     def toggle_pause(self):
         self.paused = not self.paused

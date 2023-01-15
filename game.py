@@ -2,6 +2,7 @@ import json
 import sqlite3
 import sys
 
+import pygame
 from pygame.locals import *
 
 from lib.func.load_images import load_images
@@ -204,6 +205,7 @@ session_stats = {
 mobs = list()
 game_map = list()
 liquids_array = list()
+map_true_scroll = [0, 0]
 
 while True:
     if screen_status.screen == 'game':
@@ -269,6 +271,9 @@ while True:
             liquids = [[]]
             for tile_x in possible_x:
                 tile = game_map[tile_y][tile_x]
+                if not tile.get("seen", False):
+                    tile.update({"seen": True})
+                    game_map[tile_y][tile_x] = tile
                 block_id = tile.get("block_id", "0")
                 percentage = 0
                 # if abs(player_rect.x - x * 32) <= width // 2 and abs(player_rect.y - y * 32) <= height // 2:
@@ -289,7 +294,7 @@ while True:
                         pass
                 if tile.get("percentage", 0.0) > 0:
                     percentage = math.floor(float(tile.get("percentage", 0.0)) / 10)
-                if tile.get("floating_blocks", 0) > 0:
+                if tile.get("floating_blocks"):
                     data = json.loads(tile.get("floating_blocks"))
                     block_id = list(data.keys())[0]
                     if get_block_from_coords(tile_y + 1, tile_x, game_map).get("block_id") == "0":
@@ -490,7 +495,8 @@ while True:
         # Работает для любой жидкости. Нужно просто внести id в список жидкостей LIQUIDS_IDS_ARRAY
         for water in liquids_array:
             temp_x, temp_y = player.rect.x // 32, player.rect.y // 32
-            if game_map[temp_y + 1][temp_x] in LIQUIDS_IDS_ARRAY:
+            if get_block_from_coords(temp_y + 1, temp_x, game_map).get(
+                    "block_id") in LIQUIDS_IDS_ARRAY:
                 if water.position[0] <= player.rect.x <= water.position[0] + water.width and \
                         water.position[
                             1] <= player.rect.y + 32 <= water.position[1] + water.height and not player.in_water:
@@ -499,7 +505,8 @@ while True:
                     water.splash(index, 10)
                     player.set_in_water(True)
                     break
-            elif game_map[temp_y + 2][temp_x] in LIQUIDS_IDS_ARRAY:
+            elif get_block_from_coords(temp_y + 2, temp_x, game_map).get(
+                    "block_id") in LIQUIDS_IDS_ARRAY:
                 if water.position[0] <= player.rect.x <= water.position[0] + water.width and \
                         water.position[
                             1] <= player.rect.y + 48 <= water.position[1] + water.height:
@@ -508,8 +515,9 @@ while True:
                     water.splash(index, -5)
                     player.set_in_water(False)
                     break
-            elif game_map[temp_y + 2][temp_x] not in LIQUIDS_IDS_ARRAY and game_map[temp_y][
-                temp_x] not in LIQUIDS_IDS_ARRAY:
+            elif get_block_from_coords(temp_y + 2, temp_x, game_map).get(
+                    "block_id") not in LIQUIDS_IDS_ARRAY and get_block_from_coords(temp_y, temp_x, game_map).get(
+                "block_id") not in LIQUIDS_IDS_ARRAY:
                 player.set_in_water(False)
                 break
 
@@ -518,10 +526,10 @@ while True:
             water.draw_line(display)
 
         if player.condition == 'run' and collisions['bottom'] and settings.blocks_sound:
-            numerical_id = game_map[player.rect.y // 32 + 2][player.rect.x // 32]
-            if numerical_id.count("{") == 0 and numerical_id != '0':
-                if numerical_id.count("-") > 0:
-                    numerical_id = numerical_id.split("-")[0]
+
+            numerical_id = get_block_from_coords(player.rect.y // 32 + 2, player.rect.x // 32, game_map).get(
+                "block_id", '0')
+            if numerical_id != '0':
                 block = blocks_data[numerical_id]
                 if block['material'] in ["wood", "rock", "dirt"]:
                     sound_name = block['item_id']
@@ -583,9 +591,8 @@ while True:
             blocks.clear()
             blocks.update(filtered)
 
-            game_map[player.rect.y // 32 + 1][player.rect.x // 32] = "0" if not sum(
-                list(blocks.values())) else json.dumps(
-                blocks)
+            game_map[player.rect.y // 32 + 1][player.rect.x // 32] = {"block_id": "0"} if not sum(
+                list(blocks.values())) else {"floating_blocks": json.dumps(blocks)}
 
         if collisions['bottom']:
             air_timer = 0
@@ -653,7 +660,7 @@ while True:
 
         screen_status.remove_charges(to_remove)
 
-        if game_map[player.rect.y // 32][player.rect.x // 32 - 1] == "49":
+        if game_map[player.rect.y // 32][player.rect.x // 32 - 1].get("block_id") == "49":
             start_x = player.rect.x // 32 - 1
             start_y = player.rect.y // 32 - 3
             is_portal = True
@@ -665,7 +672,7 @@ while True:
                 for tile_y in range(5):
                     if 1 <= tile_x <= 2 and 1 <= tile_y <= 3:
                         if has_frames is None:
-                            if game_map[start_y + tile_y][start_x - tile_x] == "90":
+                            if game_map[start_y + tile_y][start_x - tile_x].get("block_id") == "90":
                                 has_frames = True
                             else:
                                 has_frames = False
@@ -673,7 +680,7 @@ while True:
                         elif not has_frames:
                             frames_to_light.append([start_y + tile_y, start_x - tile_x])
                     else:
-                        if game_map[start_y + tile_y][start_x - tile_x] != "49":
+                        if game_map[start_y + tile_y][start_x - tile_x].get("block_id") != "49":
                             is_portal = False
                             break
 
@@ -844,6 +851,34 @@ while True:
         world_name_desc = main_screen_font.render('World Name', False, "white")
         screen.blit(world_name, (input_box.midleft[0] + 15, input_box.midleft[1] - 20))
         screen.blit(world_name_desc, (input_box.midleft[0] + 15, input_box.midleft[1] - 60))
+    elif screen_status.screen == 'map_view':
+        screen.fill("black")
+        pygame.display.set_caption(f"Minecraft 2D - {screen_status.world[4]} | Map")
+        # block_size = screen_status.get_map_view_block_size()
+        block_size = 6
+        camera_x, camera_y = screen_status.get_map_view_camera_coord()
+
+        map_true_scroll[0] += (camera_x - map_true_scroll[0] - WIDTH // 2)
+        scroll = map_true_scroll.copy()
+
+        scroll[0] = int(scroll[0])
+        possible_x = [num if abs(camera_x - num * block_size) <= WIDTH // 2 else 0 for num in range(len(game_map[0]))]
+        possible_y = [num for num in range(128)]
+
+        possible_x = list(filter((0).__ne__, possible_x))
+        possible_y = list(filter((0).__ne__, possible_y))
+        for tile_y in possible_y:
+            for tile_x in possible_x:
+                tile = get_block_from_coords(tile_y, tile_x, game_map)
+                block_id = tile.get("block_id", "0")
+
+                if block_id != "0" and tile.get("seen", False):
+                    block = blocks_data[block_id]
+                    image = images[block["item_id"]]
+                    x = tile_x * block_size - scroll[0]
+                    y = tile_y * block_size
+                    screen.blit(pygame.transform.scale(image, (block_size, block_size)),
+                                (x, y))
 
     for event in pygame.event.get():
         if event.type == QUIT:
@@ -901,6 +936,10 @@ while True:
                     not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
                 for button in game_menu_buttons:
                     button.on_mouse_motion(*event.pos)
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            screen_status.mouse_pressed["left" if event.button == 1 else "right" if button == 3 else "middle"] = True
+        elif event.type == pygame.MOUSEBUTTONUP:
+            screen_status.mouse_pressed["left" if event.button == 1 else "right" if button == 3 else "middle"] = False
 
         if event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'main':
             btn = None
@@ -1176,12 +1215,12 @@ while True:
                         btn = button
                         break
                 if btn is not None:
-                    if btn.id not in [9, 10]:
-                        controls_select_key = [True, btn.id]
+                    if btn.id not in [0, 1]:
+                        controls_select_key = [True, btn.id - 2]
                         btn.toggle_high_light()
-                    elif btn.id == 9:
+                    elif btn.id == 0:
                         screen_status.change_scene('settings')
-                    elif btn.id == 10:
+                    elif btn.id == 1:
                         keys = list(settings.default.keys())
                         for key in keys:
                             settings.update_setting(key, settings.default.get(key))
@@ -1191,6 +1230,23 @@ while True:
                 and screen_status.screen == 'game' and not player.is_dead:
             coord = event.pos
             screen_status.set_mouse_pos(coord)
+            if holding_left_button:
+                if hold_pos[0] // 32 != coord[0] // 32 or hold_pos[1] // 32 != coord[1] // 32:
+                    hold_start = datetime.datetime.now()
+                hold_pos = coord
+
+        if event.type == pygame.MOUSEMOTION and screen_status.screen == 'map_view':
+            if screen_status.mouse_pressed['left']:
+                rel = event.rel
+                camera_x, camera_y = screen_status.get_map_view_camera_coord()
+                camera_x -= rel[0] // 5
+                camera_y -= rel[1] // 5
+
+                if camera_x - WIDTH // 2 < 0:
+                    camera_x = WIDTH // 2
+                elif camera_x + WIDTH // 2 > len(game_map[0]) * 6:
+                    camera_x = len(game_map[0]) * 6 - WIDTH // 2
+                screen_status.set_map_view_camera(camera_x, camera_y)
 
         if event.type == pygame.MOUSEBUTTONDOWN and not player.is_dead and event.button == settings.use_item and \
                 not screen_status.paused \
@@ -1611,10 +1667,15 @@ while True:
         if event.type == pygame.MOUSEWHEEL and screen_status.screen == "game" and (
                 not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
             player.set_selected_slot(player.selected_inventory_slot - event.y)
-
         if event.type == pygame.MOUSEWHEEL and screen_status.screen == "game" and screen_status.show_inventory and \
                 player.game_mode == 'creative':
             screen_status.update_creative_scroll(-event.y, blocks_data)
+
+        if event.type == KEYDOWN and not screen_status.paused and screen_status.screen in ["game", "map_view"]:
+            if event.key == eval(f"pygame.{settings.toggle_map}"):
+                screen_status.screen = "game" if screen_status.screen == 'map_view' else "map_view"
+                screen_status.set_map_view_camera(player.rect.x // 6 + 200, player.rect.y)
+                map_true_scroll[0] = player.rect.x // 6 + 200 - WIDTH // 2
 
         if event.type == KEYDOWN and not player.is_dead and screen_status.screen == 'game' and not text_field_focused:
             if event.key == eval(f"pygame.{settings.inventory}"):
@@ -1651,7 +1712,7 @@ while True:
 
             if event.key == eval(f"pygame.{settings.portal_interact}") and can_light_portal[0]:
                 for block in can_light_portal[1]:
-                    game_map[block[0]][block[1]] = "90"
+                    game_map[block[0]][block[1]].update({"block_id": "90"})
 
             if event.key == eval(f"pygame.{settings.portal_interact}") and close_to_portal and not can_light_portal[0] \
                     and screen_status.dimension == 'overworld':
@@ -1677,11 +1738,11 @@ while True:
                     for tile_x in range(4):
                         for tile_y in range(5):
                             if 1 <= tile_x <= 2 and 1 <= tile_y <= 3:
-                                data_json[start_y + tile_y][start_x - tile_x] = "90"
+                                data_json[start_y + tile_y][start_x - tile_x] = {"block_id": "90"}
                             else:
-                                data_json[start_y + tile_y][start_x - tile_x] = "49"
-                    data_json[player_coord[1] // 32][player_coord[0] // 32] = "0"
-                    data_json[player_coord[1] // 32 - 1][player_coord[0] // 32] = "0"
+                                data_json[start_y + tile_y][start_x - tile_x] = {"block_id": "49"}
+                    data_json[player_coord[1] // 32][player_coord[0] // 32] = {"block_id": "0"}
+                    data_json[player_coord[1] // 32 - 1][player_coord[0] // 32] = {"block_id": "0"}
 
                     obj[seed] = {
                         "seed": seed,
