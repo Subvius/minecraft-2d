@@ -7,6 +7,7 @@ import lib.models.screen
 from lib.func.blocks import *
 from lib.func.draw_text import draw_text
 from lib.models.entity import *
+from lib.models.screen import Screen
 
 
 def collision_test(rect, tiles):
@@ -68,7 +69,7 @@ def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Pl
                         player.remove_from_inventory(player.selected_inventory_slot, 1)
                         session_stats.update({"blocks_placed": session_stats.get('blocks_placed', 0) + 1})
 
-            elif tile.count("{") == 0 and tile.split("-")[0] == "58":
+            elif tile == "58":
                 screen_status.toggle_inventory("crafting_table")
         except IndexError:
             print('доделать!!!!! (lib/models/map.py), line: 26')
@@ -76,8 +77,9 @@ def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Pl
     return map_objects, game_map
 
 
-def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Player, hold_start, blocks_data,
-                  falling_items, mobs: list[Entity], check_mobs: bool, sounds, session_stats: dict):
+def on_left_click(pos, screen_status: Screen, map_objects, scroll, game_map, player: Player, hold_start, blocks_data,
+                  falling_items, mobs: list[Entity], check_mobs: bool, sounds, session_stats: dict,
+                  images: dict[str, pygame.Surface]):
     x = pos[0]
     y = pos[1]
     # максимальная дистанция 4 блока (сторона 32)
@@ -113,6 +115,16 @@ def on_left_click(pos, player_rect, map_objects, scroll, game_map, player: Playe
                                 num_id = "331"
                             elif tile == "129":
                                 num_id = "388"
+
+                            block_image = images[block_data["item_id"]]
+                            color = block_image.get_at((block_image.get_width() // 2, block_image.get_height() // 2))
+                            position = (x * 32 // 32, y * 32 // 32)
+                            for _ in range(10):
+                                velocity = [random.randint(0, 20) / 10 - 1, -1]
+                                timer = random.randint(2, 5)
+
+                                screen_status.particles.add_particle(position, velocity, timer, color)
+
                             x += scroll[0]
                             y += scroll[1]
                             x //= 32

@@ -504,6 +504,15 @@ while True:
 
                     water.splash(index, 10)
                     player.set_in_water(True)
+                    block_image = images[blocks_data[get_block_from_coords(temp_y + 1, temp_x, game_map).get(
+                        "block_id")]["item_id"]]
+                    color = block_image.get_at((block_image.get_width() // 2, block_image.get_height() // 2))
+                    position = (player.rect.x - scroll[0] + 16, player.rect.y - scroll[1] + 32)
+                    for _ in range(10):
+                        velocity = [random.randint(0, 20) / 10 - 1, -1]
+                        timer = random.randint(2, 5)
+
+                        screen_status.particles.add_particle(position, velocity, timer, color)
                     break
             elif get_block_from_coords(temp_y + 2, temp_x, game_map).get(
                     "block_id") in LIQUIDS_IDS_ARRAY:
@@ -514,6 +523,15 @@ while True:
 
                     water.splash(index, -5)
                     player.set_in_water(False)
+                    block_image = images[blocks_data[get_block_from_coords(temp_y + 2, temp_x, game_map).get(
+                        "block_id")]["item_id"]]
+                    color = block_image.get_at((block_image.get_width() // 2, block_image.get_height() // 2))
+                    position = (player.rect.x - scroll[0] + 16, player.rect.y - scroll[1] + 64)
+                    for _ in range(10):
+                        velocity = [random.randint(0, 20) / 10 - 1, -1]
+                        timer = random.randint(2, 5)
+
+                        screen_status.particles.add_particle(position, velocity, timer, color)
                     break
             elif get_block_from_coords(temp_y + 2, temp_x, game_map).get(
                     "block_id") not in LIQUIDS_IDS_ARRAY and get_block_from_coords(temp_y, temp_x, game_map).get(
@@ -628,14 +646,17 @@ while True:
             draw_handholding_item(display, images, player, scroll, screen_status)
 
         if holding_left_button and not screen_status.paused:
-            map_objects, game_map, hold_start, falling_items = on_left_click(hold_pos, player.rect, map_objects, scroll,
+            map_objects, game_map, hold_start, falling_items = on_left_click(hold_pos, screen_status, map_objects,
+                                                                             scroll,
                                                                              game_map,
                                                                              player,
                                                                              hold_start,
                                                                              blocks_data, falling_items, mobs, False,
-                                                                             sounds, session_stats)
+                                                                             sounds, session_stats, images)
 
         screen.blit(pygame.transform.scale(display, WINDOW_SIZE), (0, 0))
+
+        screen_status.particles.update(screen)
 
         to_remove = []
         for index in range(len(screen_status.charges)):
@@ -1269,12 +1290,13 @@ while True:
             holding_left_button = True
             hold_start = datetime.datetime.now()
             hold_pos = event.pos
-            map_objects, game_map, hold_start, falling_items = on_left_click(hold_pos, player.rect, map_objects, scroll,
+            map_objects, game_map, hold_start, falling_items = on_left_click(hold_pos, screen_status, map_objects,
+                                                                             scroll,
                                                                              game_map,
                                                                              player,
                                                                              hold_start,
                                                                              blocks_data, falling_items, mobs, True,
-                                                                             sounds, session_stats)
+                                                                             sounds, session_stats, images)
 
         if event.type == pygame.MOUSEBUTTONUP and event.button == settings.attack and not screen_status.paused \
                 and screen_status.screen == 'game':

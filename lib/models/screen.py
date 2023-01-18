@@ -1,3 +1,6 @@
+from lib.models.particles import Particle, Particles
+
+
 class Screen:
     def __init__(self, start_screen: str = "main", paused: bool = True):
         self.screen = start_screen
@@ -28,6 +31,7 @@ class Screen:
             "middle": False,
             "right": False,
         }
+        self.particles = Particles()
 
     def change_scene(self, screen: str):
         """Changes screen to another. Can't be same as current"""
