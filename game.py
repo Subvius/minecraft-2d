@@ -90,6 +90,7 @@ close_to_portal = False
 can_light_portal = [False, []]
 
 selected_item = None
+item_info = None
 
 player_img = pygame.image.load('lib/assets/character.png')
 player_rect = pygame.Rect(100, 1500, 50, 70)
@@ -190,6 +191,9 @@ HEAL_DELAY = 1500
 WALK_SOUND_DELAY = 500
 walk_sound = 1
 last_walk_sound_play = pygame.time.get_ticks()
+DOUBLE_CLICK_EVENT = pygame.USEREVENT + 1
+DOUBLE_CLICK_DELAY = 200
+last_click = pygame.time.get_ticks()
 
 session_stats = {
     "blocks_mined": 0,
@@ -743,16 +747,20 @@ while True:
 
         if screen_status.show_inventory and player.game_mode == 'survival':
             draw_expanded_inventory(screen, player.inventory, WIDTH, HEIGHT, inventory_font,
-                                    images, blocks_data, inventory_crafting_slots, craft_result, player)
+                                    images, blocks_data, inventory_crafting_slots, craft_result, player, screen_status)
         elif screen_status.show_inventory and player.game_mode == 'creative':
             draw_creative_inventory(screen, player.inventory, WIDTH, HEIGHT, inventory_font,
                                     images, blocks_data, player, main_screen_font,
                                     screen_status.creative_inventory_scroll,
-                                    screen_status.creative_inventory_text_field_text)
+                                    screen_status.creative_inventory_text_field_text, screen_status)
         elif screen_status.inventories.get("crafting_table", False):
             draw_crafting_table_inventory(screen, player.inventory, WIDTH, HEIGHT, inventory_font,
                                           images,
-                                          blocks_data, crafting_table_slots, craft_result, main_screen_font)
+                                          blocks_data, crafting_table_slots, craft_result, main_screen_font,
+                                          screen_status)
+
+        if item_info is not None and selected_item is None:
+            draw_item_desc(screen, item_info[0], item_info[1], main_screen_font, inventory_font)
 
         if selected_item is not None and (
                 screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]):
@@ -957,10 +965,98 @@ while True:
                     not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
                 for button in game_menu_buttons:
                     button.on_mouse_motion(*event.pos)
+
         if event.type == pygame.MOUSEBUTTONDOWN:
             screen_status.mouse_pressed["left" if event.button == 1 else "right" if button == 3 else "middle"] = True
+            screen_status.set_mouse_pos(event.pos)
+            current_time = pygame.time.get_ticks()
+            if current_time - last_click < DOUBLE_CLICK_DELAY:
+                pos = screen_status.mouse_pos
+                if screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]:
+                    blocks_to_show: dict = {}
+                    if text_field_text != "":
+                        for block in blocks_data:
+                            if blocks_data[block]['item_id'].__contains__(text_field_text):
+                                blocks_to_show.update({block: blocks_data[block]})
+                    else:
+                        blocks_to_show = blocks_data
+                    types = {
+                        "crafting_table": crafting_table_slots,
+                        "inventory": player.inventory,
+                        "craft_result": craft_result,
+                        "blocks_to_show": blocks_to_show,
+                        "inventory_crafting_slots": inventory_crafting_slots,
+                        "scroll": screen_status.creative_inventory_scroll * 9
+                    }
+                    for tile_rect in screen_status.inventory_rects:
+                        if tile_rect.check_collide(pos):
+                            item, index, block = rect_tile.get_value(types, blocks_data)
+                            if item is not None or selected_item is not None:
+                                inv_type = tile_rect.inventory_type
+                                if block is None:
+                                    block = get_block_data_by_name(blocks_data, selected_item['item_id'])
+                                if inv_type == "inventory":
+                                    for i_y, slot_y in enumerate(player.inventory):
+                                        for i_x, slot_x in enumerate(slot_y):
+                                            if slot_x is not None and slot_x["item_id"] == selected_item['item_id']:
+                                                selected_item["quantity"] += slot_x[
+                                                    "quantity"]
+
+                                                if selected_item["quantity"] > block[
+                                                    'max_stack_size']:
+                                                    player.inventory[i_y][i_x]["quantity"] = \
+                                                        selected_item["quantity"] - \
+                                                        block[
+                                                            'max_stack_size']
+                                                    selected_item["quantity"] = block[
+                                                        'max_stack_size']
+                                                    break
+                                                else:
+                                                    player.inventory[i_y][i_x] = None
+                                elif inv_type == 'crafting_table':
+                                    for i_y, slot_y in enumerate(crafting_table_slots):
+                                        for i_x, slot_x in enumerate(slot_y):
+                                            if slot_x is not None and slot_x["item_id"] == selected_item['item_id']:
+                                                selected_item["quantity"] += slot_x[
+                                                    "quantity"]
+
+                                                if selected_item["quantity"] > block[
+                                                    'max_stack_size']:
+                                                    crafting_table_slots[i_y][i_x]["quantity"] = \
+                                                        selected_item["quantity"] - \
+                                                        block[
+                                                            'max_stack_size']
+                                                    selected_item["quantity"] = block[
+                                                        'max_stack_size']
+                                                    break
+                                                else:
+                                                    crafting_table_slots[i_y][i_x] = None
+                                elif inv_type == 'inventory_crafting_slots':
+                                    for i_y, slot_y in enumerate(inventory_crafting_slots):
+                                        for i_x, slot_x in enumerate(slot_y):
+                                            if slot_x is not None and slot_x["item_id"] == selected_item['item_id']:
+                                                selected_item["quantity"] += slot_x[
+                                                    "quantity"]
+
+                                                if selected_item["quantity"] > block[
+                                                    'max_stack_size']:
+                                                    inventory_crafting_slots[i_y][i_x]["quantity"] = \
+                                                        selected_item["quantity"] - \
+                                                        block[
+                                                            'max_stack_size']
+                                                    selected_item["quantity"] = block[
+                                                        'max_stack_size']
+                                                    break
+                                                else:
+                                                    inventory_crafting_slots[i_y][i_x] = None
+            last_click = current_time
+
         elif event.type == pygame.MOUSEBUTTONUP:
             screen_status.mouse_pressed["left" if event.button == 1 else "right" if button == 3 else "middle"] = False
+            if screen_status.passed_slots and screen_status.drag_start_count and selected_item["quantity"] == 0:
+                selected_item = None
+            screen_status.drag_start_count = None
+            screen_status.passed_slots = list()
 
         if event.type == pygame.MOUSEBUTTONDOWN and screen_status.screen == 'main':
             btn = None
@@ -1255,6 +1351,88 @@ while True:
                 if hold_pos[0] // 32 != coord[0] // 32 or hold_pos[1] // 32 != coord[1] // 32:
                     hold_start = datetime.datetime.now()
                 hold_pos = coord
+        elif event.type == pygame.MOUSEMOTION and screen_status.screen == "game" and screen_status.paused and not player.is_dead:
+            coord = event.pos
+            screen_status.set_mouse_pos(coord)
+
+            if screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]:
+
+                blocks_to_show: dict = {}
+                if text_field_text != "":
+                    for block in blocks_data:
+                        if blocks_data[block]['item_id'].__contains__(text_field_text):
+                            blocks_to_show.update({block: blocks_data[block]})
+                else:
+                    blocks_to_show = blocks_data
+                types = {
+                    "crafting_table": crafting_table_slots,
+                    "inventory": player.inventory,
+                    "craft_result": craft_result,
+                    "blocks_to_show": blocks_to_show,
+                    "inventory_crafting_slots": inventory_crafting_slots,
+                    "scroll": screen_status.creative_inventory_scroll * 9
+                }
+                should_display = False
+                for rect_tile in screen_status.inventory_rects:
+                    if rect_tile.check_collide(coord):
+                        rect_tile.toggle_high_light(True)
+                        item, index, block = rect_tile.get_value(types, blocks_data)
+                        if item is not None:
+                            item_info = [item, coord]
+                            should_display = True
+
+                        elif selected_item is not None and screen_status.mouse_pressed[
+                            'left'] and rect_tile.inventory_type in ["inventory", "inventory_crafting_slots",
+                                                                     "crafting_table"] and \
+                                screen_status.drag_start_count is not None:
+                            new_count = len(screen_status.passed_slots) + 1
+                            if screen_status.drag_start_count // new_count >= 1:
+
+                                screen_status.passed_slots.append(rect_tile)
+                                new_quantity = screen_status.drag_start_count // new_count
+                                selected_item["quantity"] = screen_status.drag_start_count
+                                print(screen_status.drag_start_count, new_quantity, new_count, selected_item)
+                                for slot in screen_status.passed_slots:
+                                    inv_type = slot.inventory_type
+                                    if inv_type == 'inventory':
+                                        player.inventory[slot.row][slot.col] = {
+                                            "type": selected_item['type'],
+                                            'item_id': selected_item['item_id'],
+                                            'numerical_id': selected_item['numerical_id'],
+                                            'quantity': new_quantity
+                                        }
+                                    elif inv_type == 'inventory_crafting_slots':
+                                        inventory_crafting_slots[slot.row][slot.col] = {
+                                            "type": selected_item['type'],
+                                            'item_id': selected_item['item_id'],
+                                            'numerical_id': selected_item['numerical_id'],
+                                            'quantity': new_quantity
+                                        }
+                                        res = check_if_can_craft(True, inventory_crafting_slots, recipes)
+                                        if res[0]:
+                                            craft_result = res[2]
+                                        else:
+                                            craft_result = None
+                                    elif inv_type == 'crafting_table':
+                                        crafting_table_slots[slot.row][slot.col] = {
+                                            "type": selected_item['type'],
+                                            'item_id': selected_item['item_id'],
+                                            'numerical_id': selected_item['numerical_id'],
+                                            'quantity': new_quantity
+                                        }
+                                        print(crafting_table_slots)
+                                        res = check_if_can_craft(False, crafting_table_slots, recipes)
+                                        if res[0]:
+                                            craft_result = res[2]
+                                        else:
+                                            craft_result = None
+                                    selected_item['quantity'] -= new_quantity
+
+
+                    else:
+                        rect_tile.toggle_high_light(False)
+                if not should_display:
+                    item_info = None
 
         if event.type == pygame.MOUSEMOTION and screen_status.screen == 'map_view':
             if screen_status.mouse_pressed['left']:
@@ -1316,6 +1494,7 @@ while True:
 
             rect = pygame.Rect(left, top, WIDTH, HEIGHT)
             mouse_rect = pygame.Rect(mx, my, 1, 1)
+            selected_item_before = selected_item
             # Пользователь кликнул в инвентарь
             try:
                 if rect.colliderect(mouse_rect):
@@ -1578,8 +1757,13 @@ while True:
                                             "best_for", None) is not None else "item",
                                     }
                                 elif selected_item is not None and selected_item["item_id"] == block["item_id"]:
-                                    selected_item['quantity'] += craft_result['result'].get("count", 1)
-                                if selected_item['item_id'] == block['item_id']:
+                                    if selected_item["quantity"] + craft_result['result'].get("count", 1) <= block[
+                                        "max_stack_size"]:
+                                        selected_item['quantity'] += craft_result['result'].get("count", 1)
+
+                                if selected_item['item_id'] == block['item_id'] and selected_item["quantity"] + \
+                                        craft_result['result'].get("count", 1) <= block[
+                                    "max_stack_size"]:
                                     if block.get("best_for", None) is not None:
                                         selected_item.update({"best_for": block.get("best_for", None)})
                                     for row in inventory_crafting_slots:
@@ -1642,8 +1826,13 @@ while True:
                                             "best_for", None) is not None else "item",
                                     }
                                 elif selected_item is not None and selected_item["item_id"] == block["item_id"]:
-                                    selected_item['quantity'] += craft_result['result'].get("count", 1)
-                                if selected_item['item_id'] == block['item_id']:
+                                    if selected_item["quantity"] + craft_result['result'].get("count", 1) <= block[
+                                        "max_stack_size"]:
+                                        selected_item['quantity'] += craft_result['result'].get("count", 1)
+
+                                if selected_item['item_id'] == block['item_id'] and selected_item["quantity"] + \
+                                        craft_result['result'].get("count", 1) <= block[
+                                    "max_stack_size"]:
                                     if block.get("best_for", None) is not None:
                                         selected_item.update({"best_for": block.get("best_for", None)})
                                     for row in crafting_table_slots:
@@ -1678,6 +1867,8 @@ while True:
             except IndexError:
                 # Player clicked into separating area
                 pass
+            if selected_item_before is None and selected_item is not None:
+                screen_status.drag_start_count = selected_item["quantity"]
 
         if event.type == pygame.MOUSEMOTION and not player.is_dead and screen_status.screen == "game" and (
                 screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]) \
@@ -1704,6 +1895,7 @@ while True:
                 screen_status.toggle_inventory()
                 moving_left = moving_right = False
                 craft_result = None
+                item_info = None
             elif event.key == pygame.K_ESCAPE:
                 if not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]:
                     screen_status.toggle_pause()
@@ -1714,6 +1906,53 @@ while True:
                     screen_status.toggle_inventory()
                     moving_left = moving_right = False
                     craft_result = None
+            elif event.key in [pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7,
+                               pygame.K_8, pygame.K_9, ] and screen_status.show_inventory or \
+                    sorted(list(screen_status.inventories.values()))[-1]:
+                blocks_to_show: dict = {}
+                if text_field_text != "":
+                    for block in blocks_data:
+                        if blocks_data[block]['item_id'].__contains__(text_field_text):
+                            blocks_to_show.update({block: blocks_data[block]})
+                else:
+                    blocks_to_show = blocks_data
+                types = {
+                    "crafting_table": crafting_table_slots,
+                    "inventory": player.inventory,
+                    "craft_result": craft_result,
+                    "blocks_to_show": blocks_to_show,
+                    "inventory_crafting_slots": inventory_crafting_slots,
+                    "scroll": screen_status.creative_inventory_scroll * 9
+                }
+                pressed_keys = pygame.key.get_pressed()
+                for tile_rect in screen_status.inventory_rects:
+                    if tile_rect.check_collide(screen_status.mouse_pos):
+                        item, index, block = tile_rect.get_value(types, blocks_data)
+                        # if item is not None and block['max_stack_size'] != 0:
+                        key = list(types.keys())[index]
+                        if key == "blocks_to_show" and item is not None and block['max_stack_size'] != 0:
+                            player.inventory[0][int(event.key) - 49] = item
+                            player.inventory[0][int(event.key) - 49]['quantity'] = block["max_stack_size"] if \
+                                pressed_keys[K_LSHIFT] else 1
+
+                        elif key == 'blocks_to_show' and item is None:
+                            player.inventory[0][int(event.key) - 49] = None
+
+                        elif key == "crafting_table":
+                            player.inventory[0][int(event.key) - 49], crafting_table_slots[tile_rect.row][
+                                tile_rect.col] = crafting_table_slots[tile_rect.row][tile_rect.col], \
+                                                 player.inventory[0][int(event.key) - 49]
+                        elif key == 'inventory':
+                            player.inventory[0][int(event.key) - 49], player.inventory[tile_rect.row][
+                                tile_rect.col] = player.inventory[tile_rect.row][tile_rect.col], \
+                                                 player.inventory[0][int(event.key) - 49]
+                        elif key == 'inventory_crafting_slots':
+                            player.inventory[0][int(event.key) - 49], inventory_crafting_slots[tile_rect.row][
+                                tile_rect.col] = inventory_crafting_slots[tile_rect.row][tile_rect.col], \
+                                                 player.inventory[0][int(event.key) - 49]
+                        # elif item is None:
+                        #     player.inventory[0][int(event.key) - 49] = None
+
         if event.type == KEYDOWN and not player.is_dead and not screen_status.paused \
                 and screen_status.screen == 'game' and not text_field_focused:
             if event.key == K_RIGHT or event.key == eval(f"pygame.{settings.move_right}"):

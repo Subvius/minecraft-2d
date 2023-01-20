@@ -99,7 +99,8 @@ def on_left_click(pos, screen_status: Screen, map_objects, scroll, game_map, pla
                         now = datetime.datetime.now()
                         if now - hold_start >= datetime.timedelta(seconds=breaking_time):
                             game_map[value_y][value_x] = {"block_id": '0'}
-                            map_objects.remove(pygame.Rect(value_x * 32, value_y * 32, 32, 32))
+                            if tile != "58":
+                                map_objects.remove(pygame.Rect(value_x * 32, value_y * 32, 32, 32))
                             hold_start = now
 
                             num_id = tile
@@ -320,7 +321,7 @@ def draw_inventory(screen, inventory, width, height, font, selected_slot, images
 
 
 def draw_expanded_inventory(screen, inventory, width, height, font, images, blocks_data,
-                            inventory_crafting_slots: list, craft_result: dict, player: Player):
+                            inventory_crafting_slots: list, craft_result: dict, player: Player, screen_status: Screen):
     window_width = (288 - 50) * 1.25
     window_height = (256 - 30) * 1.25
     left = width // 2 - window_width // 2
@@ -342,7 +343,9 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
     for i in range(4):
         y = 10 + i * tile_size + 1 * i
         x = 10
-        pygame.draw.rect(screen, tile_color,
+        tile_rect = (left + x, top + y, 28, 28, 4, i, "inventory")
+        screen_status.add_rect(*tile_rect)
+        pygame.draw.rect(screen, tile_color if not screen_status.get_rect(*tile_rect).high_lighted else "lightgray",
                          pygame.Rect(left + x, top + y, 28, 28))
 
         draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
@@ -361,7 +364,11 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
         for tile_x in range(9):
             x = 10 + tile_x * tile_size + 1 * tile_x
             y = (42 + 3 * tile_size + 1 * 3) + 10 + tile_size * tile_y + 1 * tile_y
-            pygame.draw.rect(screen, tile_color,
+            tile_rect = (left + x, top + y, 28, 28, tile_y + 1, tile_x, "inventory")
+            screen_status.add_rect(*tile_rect)
+
+            pygame.draw.rect(screen,
+                             tile_color if not screen_status.get_rect(*tile_rect).high_lighted else "lightgray",
                              pygame.Rect(left + x, top + y, 28, 28))
             draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
             draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
@@ -384,7 +391,10 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
     for i in range(9):
         y = ((42 + 3 * tile_size + 1 * 3) + 10 + tile_size * 2 + 1 * 2) + 40
         x = 10 + i * tile_size + 1 * i
-        pygame.draw.rect(screen, tile_color,
+        tile_rect = (left + x, top + y, 28, 28, 0, i, "inventory")
+        screen_status.add_rect(*tile_rect)
+
+        pygame.draw.rect(screen, tile_color if not screen_status.get_rect(*tile_rect).high_lighted else "lightgray",
                          pygame.Rect(left + x, top + y, 28, 28))
         draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
         draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
@@ -422,7 +432,10 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
         for tile_y in range(2):
             x = (10 + 4 * tile_size + 1 * 4 + 20) + tile_x * tile_size + 1 * tile_x
             y = (11 + 32) + tile_size * tile_y + 1 * tile_y
-            pygame.draw.rect(screen, tile_color,
+            tile_rect = (left + x, top + y, 28, 28, tile_y, tile_x, "inventory_crafting_slots")
+            screen_status.add_rect(*tile_rect)
+
+            pygame.draw.rect(screen, tile_color if not screen_status.get_rect(*tile_rect).high_lighted else "lightgray",
                              pygame.Rect(left + x, top + y, 28, 28))
             draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
             draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
@@ -450,7 +463,11 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
 
     x = (10 + 4 * tile_size + 1 * 4 + 20) + 1 * tile_size + 1 * 1 + 68
     y = (11 + tile_size) + tile_size * 1 + 1 * 1 - 15
-    pygame.draw.rect(screen, tile_color,
+
+    tile_rect = (left + x, top + y, 28, 28, 0, 0, "craft_result")
+    screen_status.add_rect(*tile_rect)
+
+    pygame.draw.rect(screen, tile_color if not screen_status.get_rect(*tile_rect).high_lighted else "lightgray",
                      pygame.Rect(left + x, top + y, 28, 28))
     if craft_result is not None:
         result = craft_result.get("result")
@@ -477,7 +494,7 @@ def draw_expanded_inventory(screen, inventory, width, height, font, images, bloc
 
 
 def draw_crafting_table_inventory(screen, inventory, width, height, font, images, blocks_data,
-                                  crafting_slots: list, craft_result: dict, text_font):
+                                  crafting_slots: list, craft_result: dict, text_font, screen_status: Screen):
     window_width = (288 - 50) * 1.25
     window_height = (256 - 30) * 1.25
     left = width // 2 - window_width // 2
@@ -506,7 +523,9 @@ def draw_crafting_table_inventory(screen, inventory, width, height, font, images
         for tile_x in range(9):
             x = 10 + tile_x * tile_size + 1 * tile_x
             y = (42 + 3 * tile_size + 1 * 3) + 10 + tile_size * tile_y + 1 * tile_y
-            pygame.draw.rect(screen, tile_color,
+            tile_rect = (left + x, top + y, 28, 28, tile_y + 1, tile_x, "inventory")
+            screen_status.add_rect(*tile_rect)
+            pygame.draw.rect(screen, tile_color if not screen_status.get_rect(*tile_rect).high_lighted else "lightgray",
                              pygame.Rect(left + x, top + y, 28, 28))
             draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
             draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
@@ -529,7 +548,9 @@ def draw_crafting_table_inventory(screen, inventory, width, height, font, images
     for i in range(9):
         y = ((42 + 3 * tile_size + 1 * 3) + 10 + tile_size * 2 + 1 * 2) + 40
         x = 10 + i * tile_size + 1 * i
-        pygame.draw.rect(screen, tile_color,
+        tile_rect = (left + x, top + y, 28, 28, 0, i, "inventory")
+        screen_status.add_rect(*tile_rect)
+        pygame.draw.rect(screen, tile_color if not screen_status.get_rect(*tile_rect).high_lighted else "lightgray",
                          pygame.Rect(left + x, top + y, 28, 28))
         draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
         draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
@@ -557,7 +578,9 @@ def draw_crafting_table_inventory(screen, inventory, width, height, font, images
         for tile_y in range(3):
             x = 41 + tile_x * tile_size + 1 * tile_x
             y = 25 + tile_size * tile_y + 1 * tile_y
-            pygame.draw.rect(screen, tile_color,
+            tile_rect = (left + x, top + y, 28, 28, tile_y, tile_x, "crafting_table")
+            screen_status.add_rect(*tile_rect)
+            pygame.draw.rect(screen, tile_color if not screen_status.get_rect(*tile_rect).high_lighted else "lightgray",
                              pygame.Rect(left + x, top + y, 28, 28))
             draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
             draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
@@ -585,7 +608,9 @@ def draw_crafting_table_inventory(screen, inventory, width, height, font, images
 
     x = (10 + 4 * tile_size + 1 * 4 + 20) + 68 - 33
     y = (11 + tile_size) + tile_size * 1 + 1 * 1 - 15
-    pygame.draw.rect(screen, tile_color,
+    tile_rect = (left + x, top + y, 28, 28, 0, 0, "craft_result")
+    screen_status.add_rect(*tile_rect)
+    pygame.draw.rect(screen, tile_color if not screen_status.get_rect(*tile_rect).high_lighted else "lightgray",
                      pygame.Rect(left + x, top + y, 28, 28))
     if craft_result is not None:
         result = craft_result.get("result")
@@ -716,8 +741,42 @@ def draw_tabs(screen, is_selected_page, x, y, s_color, uns_color, image, on_bott
         screen.blit(pygame.transform.scale(image, (22, 22)), (x + 8, y + 8))
 
 
+def draw_item_desc(screen: pygame.Surface, item: dict, pos, font: pygame.font.Font, id_font: pygame.font.Font):
+    background_color = (25, 11, 26)
+    border_color = (0, 0, 0)
+    title_color = (255, 255, 255)
+    desc_color = (165, 164, 165)
+    id_color = (96, 91, 96)
+    font = id_font
+
+    item_type = item.get("type", "blocks")
+    title = font.render(
+        f'{" ".join([el.capitalize() for el in item.get("item_id", "").split("_")])} (#{item.get("numerical_id", "")})',
+        False, title_color)
+    height = title.get_height()
+
+    desc = []
+    if item_type != "block":
+        if item.get("damage", None) is not None:
+            desc.append(font.render("When in main hand:", False, desc_color))
+            desc.append(font.render(f"{item.get('damage', 1)} Attack Damage", False, desc_color))
+    desc.append(id_font.render(f"minecraft-2d:{item.get('item_id')}", False, id_color))
+    width = desc[-1].get_width()
+
+    x = pos[0] + 20
+    y = pos[1] - 20
+    pygame.draw.rect(screen, background_color,
+                     pygame.Rect(x, y, width + 10, height + len(desc) * desc[0].get_height() + 5))
+
+    screen.blit(title, (x + 5, y))
+    for i, d in enumerate(desc):
+        screen.blit(d, (
+            x + 5 if i == 0 or i + 1 == len(desc) else x + 10,
+            y + height + i * desc[0].get_height()))
+
+
 def draw_creative_inventory(screen, inventory, width, height, font, images, blocks_data, player, text_font,
-                            scroll: int, text_field_text: str
+                            scroll: int, text_field_text: str, screen_status: Screen
                             ):
     window_width = (288 - 50) * 1.25
     window_height = (256 - 30) * 1.25
@@ -852,7 +911,10 @@ def draw_creative_inventory(screen, inventory, width, height, font, images, bloc
             if row - scroll <= 5:
                 x = 10 + column * tile_size + 1 * column
                 y = 52 + tile_size * row + 1 * row
-                pygame.draw.rect(screen, tile_color,
+                tile_rect = (left + x, top + y, 28, 28, row, column, "blocks_to_show")
+                screen_status.add_rect(*tile_rect)
+                pygame.draw.rect(screen,
+                                 tile_color if not screen_status.get_rect(*tile_rect).high_lighted else "lightgray",
                                  pygame.Rect(left + x, top + y, 28, 28))
                 draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
                 draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)
@@ -890,7 +952,9 @@ def draw_creative_inventory(screen, inventory, width, height, font, images, bloc
     for i in range(9):
         y = ((42 + 3 * tile_size + 1 * 3) + 10 + tile_size * 2 + 1 * 2) + 40
         x = 10 + i * tile_size + 1 * i
-        pygame.draw.rect(screen, tile_color,
+        tile_rect = (left + x, top + y, 28, 28, 0, i, "inventory")
+        screen_status.add_rect(*tile_rect)
+        pygame.draw.rect(screen, tile_color if not screen_status.get_rect(*tile_rect).high_lighted else "lightgray",
                          pygame.Rect(left + x, top + y, 28, 28))
         draw_shadows(*(left + x + 28, top + y), *(left + x + 28, top + y + 28), screen)
         draw_shadows(*(left + x, top + y + 28), *(left + x + 28, top + y + 28), screen)

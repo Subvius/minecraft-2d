@@ -1,3 +1,6 @@
+import pygame
+
+from lib.models.inventory_rect import InventoryRect
 from lib.models.particles import Particle, Particles
 
 
@@ -32,6 +35,9 @@ class Screen:
             "right": False,
         }
         self.particles = Particles()
+        self.inventory_rects: list[InventoryRect] = list()
+        self.passed_slots: list[InventoryRect] = list()
+        self.drag_start_count = None
 
     def change_scene(self, screen: str):
         """Changes screen to another. Can't be same as current"""
@@ -97,6 +103,20 @@ class Screen:
                 print('INVALID INVENTORY NAME -' + inventory)
         self.toggle_pause()
         self.update_creative_text("")
+        if not self.show_inventory and not sorted(list(self.inventories.values()))[-1]:
+            self.inventory_rects = list()
+            self.passed_slots = list()
+            self.drag_start_count = None
+    def add_rect(self, x, y, width, height, row, col, inv_type):
+        rect = pygame.Rect(x, y, width, height)
+        el = InventoryRect(rect, row, col, inv_type)
+        if not self.inventory_rects.__contains__(el):
+            self.inventory_rects.append(el)
+
+    def get_rect(self, x, y, width, height, row, col, inv_type):
+        rect = pygame.Rect(x, y, width, height)
+        el = InventoryRect(rect, row, col, inv_type)
+        return self.inventory_rects[self.inventory_rects.index(el)]
 
     def change_dimension(self, dimension):
         self.dimension = dimension
