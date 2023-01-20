@@ -5,4 +5,4 @@ alg.py
 **/.DS_Store
 lib/storage/objects/
 trajectory_prev.py
-particles.py
+prev_particles.py
