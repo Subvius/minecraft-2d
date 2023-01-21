@@ -1,7 +1,4 @@
-from lib.models.player import Player
-
-
-def calculate_breaking_time(block, player: Player) -> float:
+def calculate_breaking_time(block, player) -> float:
     tool_multiplier = 1
     hardness = block['hardness']
     # Предмет в руке

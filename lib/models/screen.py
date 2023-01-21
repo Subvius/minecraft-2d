@@ -1,3 +1,5 @@
+import random
+
 import pygame
 
 from lib.models.inventory_rect import InventoryRect
@@ -35,9 +37,22 @@ class Screen:
             "right": False,
         }
         self.particles = Particles()
+
         self.inventory_rects: list[InventoryRect] = list()
         self.passed_slots: list[InventoryRect] = list()
         self.drag_start_count = None
+        self.fishing_details = {
+            "start": pygame.time.get_ticks(),
+            "target_block": None,
+            "wait_time": 1
+        }
+
+    def update_fishing_details(self, start: int = None, target_block="target_block", wait_time=random.randint(5, 30)):
+        if start is not None:
+            self.fishing_details.update({"start": start})
+        if target_block != "target_block":
+            self.fishing_details.update({"target_block": target_block})
+        self.fishing_details.update({"wait_time": wait_time * 1000})
 
     def change_scene(self, screen: str):
         """Changes screen to another. Can't be same as current"""
@@ -107,6 +122,7 @@ class Screen:
             self.inventory_rects = list()
             self.passed_slots = list()
             self.drag_start_count = None
+
     def add_rect(self, x, y, width, height, row, col, inv_type):
         rect = pygame.Rect(x, y, width, height)
         el = InventoryRect(rect, row, col, inv_type)

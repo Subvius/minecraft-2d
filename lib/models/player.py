@@ -1,6 +1,8 @@
 import math
 
 import pygame
+
+from lib.func.blocks import get_block_data_by_name
 from lib.models.sound import Sound
 
 
@@ -38,6 +40,27 @@ class Player:
                 image = sheet.subsurface(pygame.Rect(
                     frame_location, (self.width, 70)))
                 self.images[animation_type].append(image)
+
+    def add_to_inventory(self, item: dict, blocks_data) -> bool:
+        block = get_block_data_by_name(blocks_data, item['item_id'])
+        for i_y, slot_y in enumerate(self.inventory):
+            for i_x, slot_x in enumerate(slot_y):
+                if slot_x is None:
+                    self.inventory[i_y][i_x] = item
+                    return True
+                else:
+                    if slot_x.get("item_id") == item.get("item_id") and slot_x.get("quantity") < block.get(
+                            "max_stack_size"):
+                        slot_x['quantity'] += item['quantity']
+
+                        if slot_x['quantity'] > block.get("max_stack_size"):
+                            item['quantity'] = slot_x['quantity'] - block.get("max_stack_size")
+                            slot_x['quantity'] = block.get("max_stack_size")
+                            self.inventory[i_y][i_x] = slot_x
+                        else:
+                            self.inventory[i_y][i_x] = slot_x
+                            return True
+        return False
 
     def change_game_mode(self, game_mode: str = "survival"):
         if not self.is_dead:

@@ -1,4 +1,5 @@
 import json
+import random
 import sqlite3
 import sys
 
@@ -333,8 +334,8 @@ while True:
                     elif block_id == "2" and get_block_from_coords(tile_y - 1, tile_x, game_map).get(
                             "block_id") == "0" and (
                             get_block_from_coords(tile_y, tile_x - 1, game_map).get(
-                                "block_id") == "1" or get_block_from_coords(tile_y, tile_x + 1, game_map).get(
-                        "block_id") == "1"):
+                                "block_id") == "1" or
+                            get_block_from_coords(tile_y, tile_x + 1, game_map).get("block_id") == "1"):
                         if random.randint(0, 5000) == 4:
                             game_map[tile_y][tile_x] = {"block_id": "1"}
                             block_id = "1"
@@ -495,6 +496,54 @@ while True:
 
         if not collisions['bottom'] and player.jump_start is None:
             player.jump_start = [temp_rect.x // 32, temp_rect.y // 32]
+
+        if screen_status.fishing_details.get("target_block",
+                                             None) is not None and current_time - screen_status.fishing_details.get(
+            "start") >= screen_status.fishing_details.get("wait_time"):
+            chance = random.randint(0, 100)
+            if chance < 51:
+                drop = "cod"
+            elif chance < 72:
+                drop = 'salmon'
+            elif chance < 74:
+                drop = "tropical_fish"
+            elif chance < 85:
+                drop = 'pufferfish'
+            elif chance < 86:
+                drop = 'bow'
+            elif chance < 87:
+                drop = 'fishing_rod'
+            elif chance < 88:
+                drop = 'nautilus_shell'
+            elif chance < 89:
+                drop = 'bowl'
+            elif chance < 90:
+                drop = "fishing_rod"
+            elif chance < 91:
+                drop = 'stick'
+            else:
+                drop = 'salmon'
+            item_data = get_block_data_by_name(blocks_data, drop)
+            item = {
+                "item_id": drop,
+                "numerical_id": item_data['numerical_id'],
+                "quantity": 1,
+                "type": 'block' if item_data.get("material",
+                                                 None) is not None else "tool" if item_data.get(
+                    "best_for", None) is not None else "item",
+                "best_for": item_data.get("best_for"),
+                "damage": item_data.get("damage")
+            }
+
+            added = player.add_to_inventory(item, blocks_data)
+            if not added:
+                falling_items.append({
+                    "direction": "down",
+                    "x": player.rect.x,
+                    "y": player.rect.y,
+                    "numerical_id": item['numerical_id']
+                })
+            screen_status.update_fishing_details(target_block=None)
 
         # Работает для любой жидкости. Нужно просто внести id в список жидкостей LIQUIDS_IDS_ARRAY
         for water in liquids_array:
@@ -760,7 +809,7 @@ while True:
                                           screen_status)
 
         if item_info is not None and selected_item is None:
-            draw_item_desc(screen, item_info[0], item_info[1], main_screen_font, inventory_font)
+            draw_item_desc(screen, item_info[0], item_info[1], inventory_font)
 
         if selected_item is not None and (
                 screen_status.show_inventory or sorted(list(screen_status.inventories.values()))[-1]):
@@ -1153,7 +1202,7 @@ while True:
                         f"""INSERT INTO worlds(seed, createdAt, updatedAt, name) VALUES({seed},
 '{now.strftime('%d/%m/%Y, %H:%M')}', '{now.strftime('%d/%m/%Y, %H:%M')}', '{text_field_text}')""")
                     con.commit()
-                    data_json = generate_chunks(screen, blocks_data, 128, 1_000, seed, "overworld")
+                    data_json = generate_chunks(blocks_data, 128, 1_000, seed, "overworld")
                     with open("lib/storage/worlds_data.json", "r") as f:
                         obj = json.load(f)
                     inventory = [[None for _ in range(9)] for __ in range(4)]
@@ -1351,7 +1400,8 @@ while True:
                 if hold_pos[0] // 32 != coord[0] // 32 or hold_pos[1] // 32 != coord[1] // 32:
                     hold_start = datetime.datetime.now()
                 hold_pos = coord
-        elif event.type == pygame.MOUSEMOTION and screen_status.screen == "game" and screen_status.paused and not player.is_dead:
+        elif event.type == pygame.MOUSEMOTION and screen_status.screen == "game" and screen_status.paused and \
+                not player.is_dead:
             coord = event.pos
             screen_status.set_mouse_pos(coord)
 
@@ -1427,8 +1477,6 @@ while True:
                                         else:
                                             craft_result = None
                                     selected_item['quantity'] -= new_quantity
-
-
                     else:
                         rect_tile.toggle_high_light(False)
                 if not should_display:
@@ -1452,7 +1500,7 @@ while True:
                 and screen_status.screen == 'game' and (
                 not screen_status.show_inventory and not sorted(list(screen_status.inventories.values()))[-1]):
 
-            map_objects, game_map = on_right_click(event, player.rect, map_objects, scroll, game_map, player,
+            map_objects, game_map = on_right_click(event, map_objects, scroll, game_map, player,
                                                    screen_status, session_stats)
 
             item = player.inventory[0][player.selected_inventory_slot]
@@ -1990,7 +2038,7 @@ while True:
                 with open("lib/storage/nether_worlds_data.json", "r") as f:
                     world_data = json.load(f)
                 if world_data.get(seed.__str__(), None) is None:
-                    data_json = generate_chunks(screen, blocks_data, 128, 125, seed, "nether")
+                    data_json = generate_chunks(blocks_data, 128, 125, seed, "nether")
                     player_coord = (125 * 32 // 2, 60 * 32)
                     with open("lib/storage/nether_worlds_data.json", "r") as f:
                         obj = json.load(f)

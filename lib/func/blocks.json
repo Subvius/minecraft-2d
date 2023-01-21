@@ -225,6 +225,69 @@
     "stackable": 1,
     "max_stack_size": 64
   },
+  "349": {
+    "item_id": "cod",
+    "image_root": "items/cod.png",
+    "numerical_id": "349",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "350": {
+    "item_id": "cooked_cod",
+    "image_root": "items/cooked_cod.png",
+    "numerical_id": "350",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "3491": {
+    "item_id": "salmon",
+    "image_root": "items/salmon.png",
+    "numerical_id": "3491",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "3501": {
+    "item_id": "cooked_salmon",
+    "image_root": "items/cooked_salmon.png",
+    "numerical_id": "3501",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "3492": {
+    "item_id": "tropical_fish",
+    "image_root": "items/tropical_fish.png",
+    "numerical_id": "3492",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "3493": {
+    "item_id": "pufferfish",
+    "image_root": "items/pufferfish.png",
+    "numerical_id": "3493",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "570": {
+    "item_id": "nautilus_shell",
+    "image_root": "items/nautilus_shell.png",
+    "numerical_id": "570",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "281": {
+    "item_id": "bowl",
+    "image_root": "items/bowl.png",
+    "numerical_id": "281",
+    "stackable": 1,
+    "max_stack_size": 64
+  },
+  "346": {
+    "item_id": "fishing_rod",
+    "image_root": "items/fishing_rod.png",
+    "numerical_id": "346",
+    "stackable": 1,
+    "max_stack_size": 1
+  },
   "318": {
     "item_id": "flint",
     "image_root": "items/flint.png",

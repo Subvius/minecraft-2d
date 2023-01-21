@@ -8,6 +8,7 @@ from lib.func.blocks import *
 from lib.func.draw_text import draw_text
 from lib.models.entity import *
 from lib.models.screen import Screen
+from lib.models.player import Player
 
 
 def collision_test(rect, tiles):
@@ -45,7 +46,8 @@ def is_close(x, y, x0, y0, radius) -> bool:
     return ((x - x0) ** 2 + (y - y0) ** 2) <= (radius * 32) ** 2
 
 
-def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Player, screen_status, session_stats):
+def on_right_click(event, map_objects, scroll, game_map, player: Player, screen_status: Screen,
+                   session_stats):
     pos = event.pos
     x = pos[0]
     y = pos[1]
@@ -58,7 +60,25 @@ def on_right_click(event, player_rect, map_objects, scroll, game_map, player: Pl
             tile = game_map[value_y][value_x].get("block_id")
             # игрок кликнул по "воздуху" и рядом с "воздухом есть блок"
             if tile in ["0", "9"]:
-                if game_map[value_y + 1][value_x].get("block_id") != "0" or game_map[value_y - 1][value_x].get(
+                if player.inventory[0][player.selected_inventory_slot] is not None and player.inventory[0][
+                    player.selected_inventory_slot]["item_id"].count(
+                    "fishing_rod") > 0 and tile == '9' and screen_status.fishing_details.get('target_block',
+                                                                                             None) is None:
+                    if game_map[value_y - 1][value_x].get("block_id") == "9":
+                        for i in range(1, value_y):
+                            if game_map[value_y - i - 1][value_x].get('block_id') != "9":
+                                screen_status.update_fishing_details(pygame.time.get_ticks(),
+                                                                     (value_x * 32 + 16, (value_y - i) * 32))
+                    else:
+                        screen_status.update_fishing_details(pygame.time.get_ticks(),
+                                                             (value_x * 32 + 16, value_y * 32))
+                elif player.inventory[0][player.selected_inventory_slot] is not None and player.inventory[0][
+                    player.selected_inventory_slot]["item_id"].count(
+                    "fishing_rod") > 0 and screen_status.fishing_details.get('target_block',
+                                                                             None) is not None:
+                    screen_status.update_fishing_details(target_block=None)
+                    print(screen_status.fishing_details)
+                elif game_map[value_y + 1][value_x].get("block_id") != "0" or game_map[value_y - 1][value_x].get(
                         "block_id") != "0" \
                         or game_map[value_y][value_x + 1].get("block_id") != "0" or game_map[value_y][value_x - 1].get(
                     "block_id") != "0":
@@ -636,9 +656,10 @@ def draw_crafting_table_inventory(screen, inventory, width, height, font, images
     draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
 
 
-def draw_handholding_item(screen: pygame.Surface, images: dict, player: Player, scroll: list[int], screen_status):
+def draw_handholding_item(screen: pygame.Surface, images: dict, player: Player, scroll: list[int],
+                          screen_status: Screen):
     item = player.inventory[0][player.selected_inventory_slot]
-    image = images[item['item_id']]
+    image: pygame.Surface = images[item['item_id']]
     mx = screen_status.mouse_pos[0]
     my = screen_status.mouse_pos[1]
     x = player.rect.x - scroll[0]
@@ -646,6 +667,15 @@ def draw_handholding_item(screen: pygame.Surface, images: dict, player: Player, 
     y = player.rect.y - scroll[1] + 32
 
     angle = player.get_angle_for_display(mx, my, scroll) - 15
+    if item['item_id'].count("fishing_rod") > 0:
+        angle = 0
+        if screen_status.fishing_details['target_block'] is not None:
+            target_pos = screen_status.fishing_details.get("target_block")
+            pygame.draw.line(screen, "black", (x + 24, y),
+                             (target_pos[0] - scroll[0] + 6, target_pos[1] - 4 - scroll[1]))
+            screen.blit(pygame.transform.scale(images['bobber'], (12, 12)),
+                        (target_pos[0] - scroll[0], target_pos[1] - 4 - scroll[1]))
+            image = images['fishing_rod_no_bobber']
 
     screen.blit(pygame.transform.rotate(pygame.transform.scale(image, (24, 24)).convert_alpha(), angle), (x, y))
 
@@ -741,9 +771,8 @@ def draw_tabs(screen, is_selected_page, x, y, s_color, uns_color, image, on_bott
         screen.blit(pygame.transform.scale(image, (22, 22)), (x + 8, y + 8))
 
 
-def draw_item_desc(screen: pygame.Surface, item: dict, pos, font: pygame.font.Font, id_font: pygame.font.Font):
+def draw_item_desc(screen: pygame.Surface, item: dict, pos, id_font: pygame.font.Font):
     background_color = (25, 11, 26)
-    border_color = (0, 0, 0)
     title_color = (255, 255, 255)
     desc_color = (165, 164, 165)
     id_color = (96, 91, 96)
@@ -990,7 +1019,7 @@ def draw_sun(screen: pygame.Surface, screen_status: lib.models.screen.Screen, ic
     screen.blit(pygame.transform.scale(image, (64, 64)), pos)
 
 
-def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimension):
+def generate_chunks(blocks_data, y_max, quantity_of_chunks, seed, dimension):
     x_max = 8 * quantity_of_chunks
     game_map = [[{"block_id": "0"} for _ in range(x_max)] for _ in range(y_max)]
 
@@ -1096,7 +1125,6 @@ def generate_chunks(screen, blocks_data, y_max, quantity_of_chunks, seed, dimens
                     block_id = get_block_data_by_name(blocks_data, 'netherrack')['numerical_id']
                     game_map[tile_y][tile_x] = {"block_id": block_id.__str__()}
                 elif 65 <= tile_y <= 70:
-                    value = random.randint(1, 1000)
                     height = math.floor(noise.pnoise1(tile_x * 0.1, repeat=9999999) * (seed ** 0.5))
 
                     if tile_y <= (70 + 65) // 2 - height:
