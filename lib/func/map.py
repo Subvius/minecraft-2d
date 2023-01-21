@@ -1,5 +1,7 @@
 import datetime
 import math
+import random
+
 import noise
 import pygame
 
@@ -1023,6 +1025,33 @@ def generate_chunks(blocks_data, y_max, quantity_of_chunks, seed, dimension):
     x_max = 8 * quantity_of_chunks
     game_map = [[{"block_id": "0"} for _ in range(x_max)] for _ in range(y_max)]
 
+    current_x = 0
+    min_biome_length = 200
+    max_biome_length = 400
+    biomes = dict()
+    desert_biomes = list()
+    for i in range(x_max // min_biome_length):
+        length = random.randint(min_biome_length, max_biome_length)
+        num = random.randint(0, 33)
+        biome = 'plains'
+        if num < 6:
+            biome = "desert"
+            for num in range(current_x, current_x + length + 1):
+                desert_biomes.append(num)
+        elif num < 12:
+            biome = 'river'
+        elif num < 21:
+            biome = "plains"
+        elif num < 30:
+            biome = 'forest'
+        elif num < 34:
+            biome = 'snowy_plains'
+        biomes.update({f"{current_x}-{current_x + length}": {
+            "biome": biome
+        }})
+        current_x += length
+        if current_x >= x_max:
+            break
     trees = [
         """ 1111
  1112111
@@ -1034,28 +1063,9 @@ def generate_chunks(blocks_data, y_max, quantity_of_chunks, seed, dimension):
     if dimension == 'overworld':
         for tile_y in range(y_max):
             for tile_x in range(x_max):
-
-                # if 65 == tile_y:
-                #     value = random.randint(1, 1000)
-                #
-                #     if 30 <= value < 60:
-                #         house_list = house_schema.split("\n")
-                #         house_list = house_list[::-1]
-                #         for y_adder in range(len(house_list)):
-                #             for x_adder in range(len(house_list[0])):
-                #                 try:
-                #                     current = house_list[y_adder][x_adder]
-                #                     if current == "7":
-                #                         current = "17"
-                #                     elif current == '3':
-                #                         current = "324"
-                #                     elif current == " ":
-                #                         current = "0"
-                #                     game_map[tile_y + y_adder][tile_x - len(house_list[0]) + x_adder] = current
-                #                 except IndexError:
-                #                     # мы вышли за границу карты
-                #                     pass
-
+                is_desert = tile_x in desert_biomes
+                upper_block = '12' if is_desert else "1"
+                fill_block = '12' if is_desert else "2"
                 if tile_y == 0:
                     block = get_block_data_by_name(blocks_data, 'stone')
                     game_map[tile_y][tile_x] = {"block_id": block['numerical_id']} if block is not None else {
@@ -1074,36 +1084,47 @@ def generate_chunks(blocks_data, y_max, quantity_of_chunks, seed, dimension):
                 elif 60 <= tile_y <= 64:
                     block_id = get_block_data_by_name(blocks_data, 'dirt')['numerical_id']
 
-                    game_map[tile_y][tile_x] = {"block_id": block_id.__str__()}
+                    game_map[tile_y][tile_x] = {"block_id": fill_block}
                 elif 65 <= tile_y <= 70:
                     # value = random.randint(1, 1000)
                     height = math.floor(noise.pnoise1(tile_x * 0.1, repeat=9999999) * (seed ** 0.5))
                     if tile_y <= (70 + 65) // 2 - height and game_map[tile_y][tile_x].get("block_id") == "0":
-                        game_map[tile_y][tile_x] = {"block_id": "1"}
+                        game_map[tile_y][tile_x] = {"block_id": upper_block}
+                # Кактусы
+                if is_desert:
+                    if 65 <= tile_y <= 70 and game_map[tile_y - 1][tile_x].get("block_id") in [upper_block,
+                                                                                               fill_block] and \
+                            game_map[tile_y][tile_x].get("block_id") == "0":
+                        value = random.randint(0, 100)
+                        if value < 12:
+                            length = random.randint(2, 3)
+                            for y_adder in range(length):
+                                game_map[tile_y + y_adder][tile_x] = {"block_id": "81"}
+                # Деревья
+                else:
+                    if game_map[tile_y][tile_x - 5].get("block_id") == "0" and game_map[tile_y - 1][tile_x - 5].get(
+                            "block_id") != "0" \
+                            and 70 >= tile_y >= 65:
+                        value = random.randint(1, 1000)
+                        if 0 <= value <= 100:
+                            tree = random.choice(trees)
+                            tree = tree.replace(' ', "0")
+                            tree = tree.split("\n")
+                            tree = tree[::-1]
 
-                if game_map[tile_y][tile_x - 5].get("block_id") == "0" and game_map[tile_y - 1][tile_x - 5].get(
-                        "block_id") != "0" \
-                        and 70 >= tile_y >= 65:
-                    value = random.randint(1, 1000)
-                    if 0 <= value <= 100:
-                        tree = random.choice(trees)
-                        tree = tree.replace(' ', "0")
-                        tree = tree.split("\n")
-                        tree = tree[::-1]
-                        print(tree)
-
-                        for y_adder in range(len(tree)):
-                            for x_adder in range(len(tree[2])):
-                                try:
-                                    current = tree[y_adder][x_adder]
-                                    if current != "0":
-                                        game_map[tile_y + y_adder][
-                                            tile_x - 5 - len(tree[
-                                                                 0]) + x_adder] = {"block_id": "18"} if current == "1" \
-                                            else {"block_id": "17"}
-                                except IndexError:
-                                    # мы вышли за границу карты
-                                    pass
+                            for y_adder in range(len(tree)):
+                                for x_adder in range(len(tree[2])):
+                                    try:
+                                        current = tree[y_adder][x_adder]
+                                        if current != "0":
+                                            game_map[tile_y + y_adder][
+                                                tile_x - 5 - len(tree[
+                                                                     0]) + x_adder] = {
+                                                "block_id": "18"} if current == "1" \
+                                                else {"block_id": "17"}
+                                    except IndexError:
+                                        # мы вышли за границу карты
+                                        pass
 
     elif dimension == 'nether':
         for tile_y in range(y_max):
@@ -1141,7 +1162,7 @@ def generate_chunks(blocks_data, y_max, quantity_of_chunks, seed, dimension):
             y = 90 + i
             game_map[y] = game_map[65 + (5 - i)][:-1]
 
-    return game_map[::-1]
+    return game_map[::-1], biomes
 
 
 def ore_generator(y, y_max, dimension='overworld') -> str:

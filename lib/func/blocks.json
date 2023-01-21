@@ -188,6 +188,26 @@
     "diggable": 0,
     "material": "liquid"
   },
+  "12": {
+    "item_id": "sand",
+    "image_root": "sand.png",
+    "numerical_id": "12",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 0.5,
+    "diggable": 1,
+    "material": "dirt"
+  },
+  "81": {
+    "item_id": "cactus",
+    "image_root": "cactus.png",
+    "numerical_id": "81",
+    "stackable": 1,
+    "max_stack_size": 64,
+    "hardness": 0.4,
+    "diggable": 1,
+    "material": "plant"
+  },
   "87": {
     "item_id": "netherrack",
     "image_root": "netherrack.png",

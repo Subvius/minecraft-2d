@@ -209,6 +209,7 @@ session_stats = {
 
 mobs = list()
 game_map = list()
+current_biome = {"biome": "plants"}
 liquids_array = list()
 map_true_scroll = [0, 0]
 
@@ -270,11 +271,19 @@ while True:
         possible_x = list(filter((0).__ne__, possible_x))
         possible_y = list(filter((0).__ne__, possible_y))
 
+        possible_biomes = list()
+        for x in possible_x:
+            for biome in list(screen_status.biomes.keys()):
+                if eval(f"{biome.split('-')[1]}-{biome.split('-')[0]}>{biome.split('-')[1]}-{x}"):
+                    possible_biomes.append(screen_status.biomes[biome])
+                    break
+
         y = 0
         for tile_y in possible_y:
             x = 0
             liquids = [[]]
             for tile_x in possible_x:
+                current_biome = possible_biomes[x]
                 tile = game_map[tile_y][tile_x]
                 if not tile.get("seen", False):
                     tile.update({"seen": True})
@@ -340,7 +349,12 @@ while True:
                             game_map[tile_y][tile_x] = {"block_id": "1"}
                             block_id = "1"
                     block = blocks_data[block_id]
-                    display.blit(pygame.transform.scale(images[block['item_id']], (32, 32)),
+                    if block_id == '1' and current_biome.get("biome").count('snow'):
+                        image = images["grass_block_snow"]
+                    else:
+                        image = images[block['item_id']]
+
+                    display.blit(pygame.transform.scale(image, (32, 32)),
                                  (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1]))
 
                     mouse_coord = screen_status.mouse_pos
@@ -366,7 +380,7 @@ while True:
                         if get_block_from_coords(tile_y - 1, tile_x, game_map).get(
                                 "block_id") != "0" and tile_y < 67 and \
                                 get_block_from_coords(tile_y - 2, tile_x, game_map).get(
-                                    "block_id") != "0" and block_id not in ["49", "58", "90", "324", "18",
+                                    "block_id") != "0" and block_id not in ["49", "58", "90", "324", "18", "81",
                                                                             "17", *LIQUIDS_IDS_ARRAY]:
                             draw_rect_alpha(display, (0, 0, 0, 128),
                                             (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1], 32, 32))
@@ -374,7 +388,8 @@ while True:
                                 "block_id") != "0" and tile_y < 67 and \
                                 get_block_from_coords(tile_y - 2, tile_x, game_map).get(
                                     "block_id") != "0" and get_block_from_coords(tile_y - 3, tile_x, game_map).get(
-                            "block_id") != "0" and block_id not in ["49", "58", "90", "324", "18", *LIQUIDS_IDS_ARRAY,
+                            "block_id") != "0" and block_id not in ["49", "58", "90", "324", "18", "81",
+                                                                    *LIQUIDS_IDS_ARRAY,
                                                                     "17"]:
                             draw_rect_alpha(display, (0, 0, 0, 10),
                                             (tile_x * 32 - scroll[0], tile_y * 32 - scroll[1], 32, 32))
@@ -493,6 +508,10 @@ while True:
         temp_rect.x -= player_movement[0]
         if temp_rect.x // 32 != player.rect.x // 32:
             session_stats['distance_traveled'] += 1
+            current_biome = [screen_status.biomes[biome] for biome in list(screen_status.biomes.keys()) if
+                             list(map(int, biome.split("-")))[0] <= player.rect.x // 32 <=
+                             list(map(int, biome.split("-")))[
+                                 1]][0]
 
         if not collisions['bottom'] and player.jump_start is None:
             player.jump_start = [temp_rect.x // 32, temp_rect.y // 32]
@@ -1198,11 +1217,12 @@ while True:
                 elif btn.id == 1:
                     now = datetime.datetime.now()
                     seed = random.randint(1, 400)
+                    data_json, biomes = generate_chunks(blocks_data, 128, 1_000, seed, "overworld")
                     cursor.execute(
-                        f"""INSERT INTO worlds(seed, createdAt, updatedAt, name) VALUES({seed},
-'{now.strftime('%d/%m/%Y, %H:%M')}', '{now.strftime('%d/%m/%Y, %H:%M')}', '{text_field_text}')""")
+                        f"""INSERT INTO worlds(seed, createdAt, updatedAt, name, biomes) VALUES({seed},
+'{now.strftime('%d/%m/%Y, %H:%M')}', '{now.strftime('%d/%m/%Y, %H:%M')}', '{text_field_text}',
+ '{json.dumps(biomes)}')""")
                     con.commit()
-                    data_json = generate_chunks(blocks_data, 128, 1_000, seed, "overworld")
                     with open("lib/storage/worlds_data.json", "r") as f:
                         obj = json.load(f)
                     inventory = [[None for _ in range(9)] for __ in range(4)]
@@ -1222,7 +1242,8 @@ while True:
                         json.dump(obj, f)
 
                     world = (
-                        -1, seed, now.strftime('%d/%m/%Y, %H:%M'), now.strftime('%d/%m/%Y, %H:%M'), text_field_text)
+                        -1, seed, now.strftime('%d/%m/%Y, %H:%M'), now.strftime('%d/%m/%Y, %H:%M'), text_field_text,
+                        json.dumps(biomes))
                     screen_status.set_world(world)
                     screen_status.change_scene('game')
                     screen_status.toggle_pause()
@@ -2038,7 +2059,7 @@ while True:
                 with open("lib/storage/nether_worlds_data.json", "r") as f:
                     world_data = json.load(f)
                 if world_data.get(seed.__str__(), None) is None:
-                    data_json = generate_chunks(blocks_data, 128, 125, seed, "nether")
+                    data_json, _ = generate_chunks(blocks_data, 128, 125, seed, "nether")
                     player_coord = (125 * 32 // 2, 60 * 32)
                     with open("lib/storage/nether_worlds_data.json", "r") as f:
                         obj = json.load(f)

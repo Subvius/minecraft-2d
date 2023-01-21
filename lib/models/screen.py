@@ -1,3 +1,4 @@
+import json
 import random
 
 import pygame
@@ -46,6 +47,7 @@ class Screen:
             "target_block": None,
             "wait_time": 1
         }
+        self.biomes = dict()
 
     def update_fishing_details(self, start: int = None, target_block="target_block", wait_time=random.randint(5, 30)):
         if start is not None:
@@ -84,6 +86,8 @@ class Screen:
 
     def set_world(self, world):
         self.world = world
+        if world is not None:
+            self.biomes = json.loads(world[5])
 
     def add_charge(self, charge):
         self.charges.append(charge)
