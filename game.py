@@ -786,8 +786,9 @@ while True:
                     start_x = player.rect.x - scroll[0] + 10
                     start_y = player.rect.y - scroll[1] - 32
 
-                    text_surface = inventory_font.render(f"press F to light the portal", False,
-                                                         "black")
+                    text_surface = inventory_font.render(
+                        f"press {settings.portal_interact.replace('K_', '')} to light the portal", False,
+                        "black")
 
                     screen.blit(text_surface, (start_x, start_y))
 
@@ -795,7 +796,8 @@ while True:
                     start_x = player.rect.x - scroll[0] + 10
                     start_y = player.rect.y - scroll[1] - 32
 
-                    text_surface = inventory_font.render(f"press F to enter", False,
+                    text_surface = inventory_font.render(f"press {settings.portal_interact.replace('K_', '')} to enter",
+                                                         False,
                                                          "black")
 
                     screen.blit(text_surface, (start_x, start_y))
