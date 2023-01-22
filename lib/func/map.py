@@ -1082,7 +1082,7 @@ def generate_chunks(blocks_data, y_max, quantity_of_chunks, seed, dimension):
 
                     game_map[tile_y][tile_x] = {"block_id": block_id.__str__()}
                 elif 60 <= tile_y <= 64:
-                    block_id = get_block_data_by_name(blocks_data, 'dirt')['numerical_id']
+                    # block_id = get_block_data_by_name(blocks_data, 'dirt')['numerical_id']
 
                     game_map[tile_y][tile_x] = {"block_id": fill_block}
                 elif 65 <= tile_y <= 70:
