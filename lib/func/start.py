@@ -3,9 +3,10 @@ import os.path
 import sqlite3
 
 import pygame
+from typing import Tuple
 
 
-def get_worlds(cursor: sqlite3.Cursor, window_size: tuple[int, int]):
+def get_worlds(cursor: sqlite3.Cursor, window_size: Tuple[int, int]):
     worlds = cursor.execute("SELECT * FROM worlds").fetchall()
     worlds_rect = list()
 

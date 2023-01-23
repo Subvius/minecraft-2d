@@ -2,6 +2,7 @@ import json
 import random
 
 import pygame
+from typing import List
 
 from lib.models.inventory_rect import InventoryRect
 from lib.models.particles import Particle, Particles
@@ -39,8 +40,8 @@ class Screen:
         }
         self.particles = Particles()
 
-        self.inventory_rects: list[InventoryRect] = list()
-        self.passed_slots: list[InventoryRect] = list()
+        self.inventory_rects: List[InventoryRect] = list()
+        self.passed_slots: List[InventoryRect] = list()
         self.drag_start_count = None
         self.fishing_details = {
             "start": pygame.time.get_ticks(),
@@ -92,7 +93,7 @@ class Screen:
     def add_charge(self, charge):
         self.charges.append(charge)
 
-    def remove_charges(self, ids: list[int]):
+    def remove_charges(self, ids: List[int]):
         try:
             for i in ids[::-1]:
                 self.charges.pop(i)

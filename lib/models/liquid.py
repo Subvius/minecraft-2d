@@ -42,7 +42,7 @@ class Wave:
     def __eq__(self, other):
         return self.position == other.position and self.width == other.width and self.height == other.height
 
-    def update(self, scroll: list[int, int]):
+    def update(self, scroll):
         for i in self.springs:
             i.update()
         self.spread_wave()

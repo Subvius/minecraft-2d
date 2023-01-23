@@ -20,6 +20,7 @@ from lib.func.save_world import save
 from lib.func.start import get_worlds, check_files_existence
 from lib.models.wand_charge import Charge
 from lib.models.liquid import Wave
+from lib.func.Decorations import Shadows
 
 clock = pygame.time.Clock()
 
@@ -85,7 +86,7 @@ map_objects = []
 scroll = [0, 0]
 
 falling_items = []
-arrows: list[Arrow] = list()
+arrows = list()
 
 close_to_portal = False
 can_light_portal = [False, []]
@@ -207,13 +208,15 @@ session_stats = {
     "successful_crafts": 0
 }
 
+old_move = player_rect.y
+
 mobs = list()
 game_map = list()
 current_biome = {"biome": "plants"}
 liquids_array = list()
 map_true_scroll = [0, 0]
 
-while True:
+while 1:
     if screen_status.screen == 'game':
         pygame.display.set_caption(f"Minecraft 2D - {screen_status.world[4]}")
         if screen_status.dimension == 'overworld':
@@ -234,6 +237,8 @@ while True:
             # display.blit(pygame.transform.scale(images['overworld_background'], (width, height)),
             #              (0, 0 - (scroll[1] - 1370 if player.rect.y // 32 >= 57 or scroll[1] >= 1372 else 0)))
             draw_sun(display, screen_status, icons)
+
+
 
         elif screen_status.dimension == 'nether':
             display.fill((88, 30, 65))
@@ -257,16 +262,17 @@ while True:
             player.frame = 0
 
         true_scroll[0] += (player.rect.x - true_scroll[0] - WIDTH // 2 - player.image.get_width() // 2) / 20
-        true_scroll[1] += (player.rect.y - true_scroll[1] - HEIGHT // 2 - player.image.get_height() // 2) / 20
+        true_scroll[1] += (player.rect.y - true_scroll[1] - HEIGHT // 2 - player.image.get_height() // 2)
         scroll = true_scroll.copy()
 
         scroll[0] = int(scroll[0])
         scroll[1] = int(scroll[1])
 
         map_objects = []
-        water_areas: list[Wave] = []
+        water_areas = []
         possible_x = [num if abs(player_rect.x - num * 32) <= WIDTH // 2 + 64 else 0 for num in range(len(game_map[0]))]
         possible_y = [num if abs(player_rect.y - num * 32) <= WIDTH // 2 else 0 for num in range(128)]
+
 
         possible_x = list(filter((0).__ne__, possible_x))
         possible_y = list(filter((0).__ne__, possible_y))
@@ -396,14 +402,334 @@ while True:
                             # pygame.draw.rect(display, "black",
                             #                  pygame.Rect(tile_x * 32 - scroll[0], tile_y * 32 - scroll[1], 32, 32))
 
+
                 x += 1
 
-            for liquid in liquids:
-                length = len(liquid)
-                if length != 0:
-                    water = Wave(length * 32, 1, liquid[0][0] * 32, liquid[0][1] * 32)
-                    water_areas.append(water)
+
+                for liquid in liquids:
+                    length = len(liquid)
+                    if length != 0:
+                        water = Wave(length * 32, 1, liquid[0][0] * 32, liquid[0][1] * 32)
+                        water_areas.append(water)
             y += 1
+
+        if player_rect.y > 1760 and player_rect.y <= 2016:
+            for x in range(WIDTH // 32):
+                for y in range((player_rect.y - 1760) // 4):
+                    draw_rect_alpha(display, (0, 0, 0, 250), (x * 32, HEIGHT - y * 4, 32, 4))
+        else:
+            if player_rect.y > 2016 and player_rect.y <= 2048:
+                for x in range(WIDTH // 32):
+                    for y in range((player_rect.y - 1792) // 4):
+                        draw_rect_alpha(display, (0, 0, 0, 250), (x * 32, HEIGHT - y * 4, 32, 4))
+                    alf = 250
+                    for i in range(y + 1, y + 9):
+                        alf -= 15
+                        if game_map[player_rect.y // 32 + 2][player_rect.x // 32].get('block_id') == None:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 20), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 5), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                        else:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 10), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                        draw_rect_alpha(display, (0, 0, 0, 250), (0, HEIGHT - i * 4, 9, 4))
+            elif player_rect.y > 2048 and player_rect.y <= 2080:
+                for x in range(WIDTH // 32):
+                    for y in range((player_rect.y - 1824) // 4):
+                        draw_rect_alpha(display, (0, 0, 0, 250), (x * 32, HEIGHT - y * 4, 32, 4))
+                    alf = 250
+                    for i in range(y + 1, y + 9):
+                        alf -= 15
+                        if game_map[player_rect.y // 32 + 2][player_rect.x // 32].get('block_id') == None:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 20), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 5), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                        else:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 10), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                        draw_rect_alpha(display, (0, 0, 0, 250), (0, HEIGHT - i * 4, 9, 4))
+            elif player_rect.y > 2080 and player_rect.y <= 2112:
+                for x in range(WIDTH // 32):
+                    for y in range((player_rect.y - 1856) // 4):
+                        draw_rect_alpha(display, (0, 0, 0, 250), (x * 32, HEIGHT - y * 4, 32, 4))
+                    alf = 250
+                    for i in range(y + 1, y + 9):
+                        alf -= 15
+                        if game_map[player_rect.y // 32 + 2][player_rect.x // 32].get('block_id') == None:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 25), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                        else:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 10), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                        draw_rect_alpha(display, (0, 0, 0, 250), (0, HEIGHT - i * 4, 9, 4))
+
+                    for y in range(i + 1, i + 9):
+                        if game_map[player_rect.y // 32][player_rect.x // 32 - 1].get('block_id') == None:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - y * 4, 4, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 35), (x * 32 + 9, HEIGHT - y * 4, 4, 4))
+                            elif x == 17 or x == 21:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 90), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                        else:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 35), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            elif x == 17 or x == 21:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 90), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+
+                        draw_rect_alpha(display, (0, 0, 0, 250), (0, HEIGHT - y * 4, 9, 4))
+            elif player_rect.y > 2112 and player_rect.y <= 2144:
+                for x in range(WIDTH // 32):
+                    for y in range((player_rect.y - 1888) // 4):
+                        draw_rect_alpha(display, (0, 0, 0, 250), (x * 32, HEIGHT - y * 4, 32, 4))
+                    alf = 250
+                    for i in range(y + 1, y + 9):
+                        alf -= 15
+                        if game_map[player_rect.y // 32 + 2][player_rect.x // 32].get('block_id') == None:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 25), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                        else:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 10), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                        draw_rect_alpha(display, (0, 0, 0, 250), (0, HEIGHT - i * 4, 9, 4))
+
+                    for y in range(i + 1, i + 9):
+                        if game_map[player_rect.y // 32][player_rect.x // 32 - 1].get('block_id') == None:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - y * 4, 4, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 35), (x * 32 + 9, HEIGHT - y * 4, 4, 4))
+                            elif x == 17 or x == 21:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 90), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                        else:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 35), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            elif x == 17 or x == 21:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 90), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+
+                        draw_rect_alpha(display, (0, 0, 0, 250), (0, HEIGHT - y * 4, 9, 4))
+
+                    for k in range(y + 1, y + 9):
+                        if game_map[player_rect.y // 32][player_rect.x // 32 - 1].get('block_id') == None:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - k * 4, 4, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 35), (x * 32 + 9, HEIGHT - k * 4, 4, 4))
+                            elif x == 17 or x == 21:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 90), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                        else:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 35), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                            elif x == 17 or x == 21:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 90), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                        draw_rect_alpha(display, (0, 0, 0, 250), (0, HEIGHT - k * 4, 9, 4))
+            elif player_rect.y > 2144 and player_rect.y <= 2176:
+                for x in range(WIDTH // 32):
+                    for y in range((player_rect.y - 1920) // 4):
+                        draw_rect_alpha(display, (0, 0, 0, 250), (x * 32, HEIGHT - y * 4, 32, 4))
+                    alf = 250
+                    rev = 4
+                    for i in range(y + 1, y + 9):
+                        alf -= 15
+                        if game_map[player_rect.y // 32 + 2][player_rect.x // 32].get('block_id') == None:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                                draw_rect_alpha(display, (0, 0, 0, alf), (x * 32 + 9, HEIGHT - i * 4 - 128 + rev, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 25), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                                draw_rect_alpha(display, (0, 0, 0, alf - 25), (x * 32 + 9, HEIGHT - i * 4 - 128 + rev, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - i * 4 - 128 + rev, 32, 4))
+                        else:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 10), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                                draw_rect_alpha(display, (0, 0, 0, alf + 10), (x * 32 + 9, HEIGHT - i * 4 - 128 + rev, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - i * 4 - 128 + rev, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - i * 4 - 128 + rev, 32, 4))
+                        draw_rect_alpha(display, (0, 0, 0, 250), (0, HEIGHT - i * 4, 9, 4))
+                        draw_rect_alpha(display, (0, 0, 0, 250), (0, HEIGHT - i * 4 - 96, 9, 4))
+                        rev += 8
+
+                    for y in range(i + 1, i + 9):
+                        if game_map[player_rect.y // 32][player_rect.x // 32 - 1].get('block_id') == None:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - y * 4, 4, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 35), (x * 32 + 9, HEIGHT - y * 4, 4, 4))
+                            elif x == 17 or x == 21:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 90), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                        else:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 35), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            elif x == 17 or x == 21:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 90), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+
+                        draw_rect_alpha(display, (0, 0, 0, 250), (0, HEIGHT - y * 4, 9, 4))
+
+                    for k in range(y + 1, y + 9):
+                        if game_map[player_rect.y // 32][player_rect.x // 32 - 1].get('block_id') == None:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - k * 4, 4, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 35), (x * 32 + 9, HEIGHT - k * 4, 4, 4))
+                            elif x == 17 or x == 21:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 90), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                        else:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 35), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                            elif x == 17 or x == 21:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 90), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                        draw_rect_alpha(display, (0, 0, 0, 250), (0, HEIGHT - k * 4, 9, 4))
+            elif player_rect.y > 2176:
+                for x in range(WIDTH // 32):
+                    for y in range((256) // 4):
+                        draw_rect_alpha(display, (0, 0, 0, 254), (x * 32, HEIGHT - y * 4, 32, 4))
+                    for o in range((player_rect.y - 2176 if player_rect.y - 2176 <= 384 else 384) // 4):
+                        draw_rect_alpha(display, (0, 0, 0, 254), (x * 32, 384 - o * 4 , 32, 4))
+                        if player_rect.y - 2176 > 384:
+                            draw_rect_alpha(display, (0, 0, 0, 250), (x * 32, 0, 32, 4))
+
+                    alf = 250
+                    rev = 4
+                    for i in range(y + 1, y + 9):
+                        alf -= 15
+                        if game_map[player_rect.y // 32 + 2][player_rect.x // 32].get('block_id') == None:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                                draw_rect_alpha(display, (0, 0, 0, alf), (x * 32 + 9, HEIGHT - i * 4 - 128 + rev, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 25), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                                draw_rect_alpha(display, (0, 0, 0, alf - 25), (x * 32 + 9, HEIGHT - i * 4 - 128 + rev, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                                draw_rect_alpha(display, (0, 0, 0, 250), (x * 32 + 9, HEIGHT - i * 4 - 128 + rev, 32, 4))
+                        else:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 10), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                                draw_rect_alpha(display, (0, 0, 0, alf + 10), (x * 32 + 9, HEIGHT - i * 4 - 128 + rev, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - i * 4 - 128 + rev, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 254), (x * 32 + 9, HEIGHT - i * 4, 32, 4))
+                                draw_rect_alpha(display, (0, 0, 0, 254), (x * 32 + 9, HEIGHT - i * 4 - 128 + rev, 32, 4))
+                        draw_rect_alpha(display, (0, 0, 0, 254), (0, HEIGHT - i * 4, 9, 4))
+                        draw_rect_alpha(display, (0, 0, 0, 254), (0, HEIGHT - i * 4 - 96, 9, 4))
+                        rev += 8
+
+                    for y in range(i + 1, i + 9):
+                        if game_map[player_rect.y // 32][player_rect.x // 32 - 1].get('block_id') == None:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - y * 4, 4, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 35), (x * 32 + 9, HEIGHT - y * 4, 4, 4))
+                            elif x == 17 or x == 21:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 90), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 254), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                        else:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 35), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            elif x == 17 or x == 21:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 90), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 254), (x * 32 + 9, HEIGHT - y * 4, 32, 4))
+
+                        draw_rect_alpha(display, (0, 0, 0, 254), (0, HEIGHT - y * 4, 9, 4))
+
+                    for k in range(y + 1, y + 9):
+                        if game_map[player_rect.y // 32][player_rect.x // 32 - 1].get('block_id') == None:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - k * 4, 4, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 35), (x * 32 + 9, HEIGHT - k * 4, 4, 4))
+                            elif x == 17 or x == 21:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 90), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 254), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                        else:
+                            if x == 18 or x == 20:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 15), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                            elif x == 19:
+                                draw_rect_alpha(display, (0, 0, 0, alf - 35), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                            elif x == 17 or x == 21:
+                                draw_rect_alpha(display, (0, 0, 0, alf + 90), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                            else:
+                                draw_rect_alpha(display, (0, 0, 0, 254), (x * 32 + 9, HEIGHT - k * 4, 32, 4))
+                        draw_rect_alpha(display, (0, 0, 0, 254), (0, HEIGHT - k * 4, 9, 4))
+
+
+
+
+
+
 
         if liquids_array == water_areas:
             pass
@@ -978,6 +1304,7 @@ while True:
                     y = tile_y * block_size
                     screen.blit(pygame.transform.scale(image, (block_size, block_size)),
                                 (x, y))
+
 
     for event in pygame.event.get():
         if event.type == QUIT:
@@ -2147,6 +2474,8 @@ while True:
                 moving_right = False
             if event.key == K_LEFT or event.key == eval(f"pygame.{settings.move_left}"):
                 moving_left = False
+
+
 
     pygame.display.update()
     clock.tick(60)

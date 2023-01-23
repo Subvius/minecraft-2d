@@ -4,6 +4,7 @@ import random
 
 import noise
 import pygame
+from typing import List, Dict
 
 import lib.models.screen
 from lib.func.blocks import *
@@ -100,8 +101,8 @@ def on_right_click(event, map_objects, scroll, game_map, player: Player, screen_
 
 
 def on_left_click(pos, screen_status: Screen, map_objects, scroll, game_map, player: Player, hold_start, blocks_data,
-                  falling_items, mobs: list[Entity], check_mobs: bool, sounds, session_stats: dict,
-                  images: dict[str, pygame.Surface]):
+                  falling_items, mobs: List[Entity], check_mobs: bool, sounds, session_stats: dict,
+                  images: Dict[str, pygame.Surface]):
     x = pos[0]
     y = pos[1]
     # максимальная дистанция 4 блока (сторона 32)
@@ -205,8 +206,8 @@ def on_left_click(pos, screen_status: Screen, map_objects, scroll, game_map, pla
     return map_objects, game_map, hold_start, falling_items
 
 
-def draw_mobs(screen: pygame.Surface, player: Player, mobs: list[Entity], possible_x: list[int], possible_y: list[int],
-              scroll: list[int], map_objects: list[pygame.Rect], game_map: list, images, paused: bool, font, icons,
+def draw_mobs(screen: pygame.Surface, player: Player, mobs: List[Entity], possible_x: List[int], possible_y: List[int],
+              scroll: List[int], map_objects: List[pygame.Rect], game_map: list, images, paused: bool, font, icons,
               screen_status, sounds):
     for mob in mobs:
         rect = mob.rect
@@ -658,7 +659,7 @@ def draw_crafting_table_inventory(screen, inventory, width, height, font, images
     draw_shadows(*(left + x, top + y), *(left + x + 28, top + y), screen, "black")
 
 
-def draw_handholding_item(screen: pygame.Surface, images: dict, player: Player, scroll: list[int],
+def draw_handholding_item(screen: pygame.Surface, images: dict, player: Player, scroll: List[int],
                           screen_status: Screen):
     item = player.inventory[0][player.selected_inventory_slot]
     image: pygame.Surface = images[item['item_id']]
@@ -1004,7 +1005,7 @@ def draw_creative_inventory(screen, inventory, width, height, font, images, bloc
                 screen.blit(text_surface, (left + x + tile_size - 16, top + y + tile_size - 16))
 
 
-def draw_sun(screen: pygame.Surface, screen_status: lib.models.screen.Screen, icons: dict[str: pygame.Surface]):
+def draw_sun(screen: pygame.Surface, screen_status: lib.models.screen.Screen, icons):
     world_time = screen_status.world_time
     DAY_TIME = 36_000
     NIGHT_TIME = 12_000

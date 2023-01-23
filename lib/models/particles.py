@@ -1,9 +1,10 @@
 import pygame
+from typing import Tuple, List
 
 
 class Particle:
-    def __init__(self, position: tuple[int, int], velocity: tuple[int, int], timer: int,
-                 color: tuple[int, int, int] = (255, 255, 255)):
+    def __init__(self, position: Tuple[int, int], velocity: Tuple[int, int], timer: int,
+                 color: Tuple[int, int, int] = (255, 255, 255)):
         self.position = position
         self.velocity = velocity
         self.timer = timer
@@ -29,7 +30,7 @@ class Particle:
 
 class Particles:
     def __init__(self):
-        self.particles: list[Particle] = list()
+        self.particles: List[Particle] = list()
 
     def update(self, screen: pygame.Surface):
         self.particles = [p for p in self.particles if p.timer > 0.0]

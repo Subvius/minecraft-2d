@@ -2,10 +2,11 @@ import math
 import os
 
 import pygame
+from typing import Tuple, List
 
 
 class Charge:
-    def __init__(self, wand_type: str, image_name: str, launch_pos: tuple[int, int], mouse_pos: tuple[int, int],
+    def __init__(self, wand_type: str, image_name: str, launch_pos: Tuple[int, int], mouse_pos: Tuple[int, int],
                  force: int = 3, damage: int = 1, width: int = 1184, height: int = 768, fly_distance: int = 32 * 5):
         self.image_name = image_name
         self.launch_pos = launch_pos
@@ -72,7 +73,7 @@ class Charge:
         else:
             return True
 
-    def get_trajectory(self) -> list[list[int, int]]:
+    def get_trajectory(self):
         x, y = self.launch_pos
         x0, y0 = self.mouse_pos
         matrix = pygame.Surface((self.width, self.height))

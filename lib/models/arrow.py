@@ -1,12 +1,13 @@
 import math
 
 import pygame
+from typing import List, Tuple
 
 from lib.models.player import Player
 
 
 class Arrow:
-    def __init__(self, player: Player, trajectory: list[list[int, int]], mouse_pos: tuple[int, int], force: int = 3, ):
+    def __init__(self, player: Player, trajectory, mouse_pos, force: int = 3, ):
         self.player = player
         self.trajectory = trajectory
         self.force = force
@@ -34,7 +35,7 @@ class Arrow:
         return angle
 
 
-def get_trajectory(x0, y0, x, y, width, height) -> list[list[int, int]]:
+def get_trajectory(x0, y0, x, y, width, height):
     matrix = pygame.Surface((width, height))
     pygame.draw.line(matrix, "white", (x, y), (x0, y0))
     x1, y1 = x0 + abs(x0 - x) if x0 > x else x0 - abs(x0 - x), y0 + abs(y0 - y)

@@ -1,4 +1,5 @@
 import pygame
+from typing import Tuple, List
 
 from lib.models.settings import Settings
 
@@ -43,7 +44,7 @@ class Button:
         self.high_lighted = not self.high_lighted
 
 
-def set_controls_buttons(settings: Settings, window_size: tuple[int, int]) -> list[Button]:
+def set_controls_buttons(settings: Settings, window_size: Tuple[int, int]) -> List[Button]:
     buttons = [
         Button(label="Done", width=200, height=25, background_color="gray", text_color="white",
                x=window_size[0] // 2 - 210, y=int(window_size[1] // 1.075), hover_color="lightgray", uniq_id=0
